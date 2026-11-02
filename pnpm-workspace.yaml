@@ -1,0 +1,10 @@
+packages:
+  - 'apps/*'
+
+engineStrict: true
+packageManagerStrict: true
+packageManagerStrictVersion: true
+managePackageManagerVersions: false
+
+onlyBuiltDependencies:
+  - esbuild
