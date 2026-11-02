@@ -23,7 +23,7 @@ GitHub Description (확정 문구):
 ## 결정·제약
 
 - **확정**: DevFlowOps 이름 및 목적, 검증용 Finance App, React + TypeScript + Vite, pnpm Workspaces, Turborepo, SQLite, Vitest, Playwright, GitHub, GitHub Actions, Docker/Compose, GHCR.
-- **추가된 목표 범위**: 단일 모노레포에서 플랫폼 관리 화면과 검증 대상 앱을 함께 개발한다. 관리 화면은 앱별 테스트 실행 요청과 CI/CD·배포 후 QA 결과 추적을 제공한다. GitHub 기반 실행을 활용하며 조회부터 도입한다. 현재 미구현이며 플랫폼 API·인증·저장 방식은 미확정이다.
+- **추가된 목표 범위**: 단일 모노레포에서 플랫폼 관리 화면과 검증 대상 앱을 함께 개발한다. 관리 화면은 앱별 테스트 실행 요청과 CI/CD·배포 후 QA 결과 추적을 제공한다. GitHub 기반 실행을 활용하며 조회부터 도입한다. 현재 관리 화면의 기본 뼈대만 있으며 실제 연동은 미구현이다. 플랫폼 API·인증·저장 방식은 미확정이다.
 - **선택된 인프라 목표**: OCI Always Free Ampere A1. 실제 할당, 자원, 적합성은 검증 전이다.
 - **선택된 AI 방향**: Codex CLI와 사용자의 ChatGPT 구독 로그인으로 **별도의 유료 API 종량제 사용을 피하는 방향**. OCI 서버에서 무인 실행은 아직 검증하지 않았다.
 - **추천/미확정**: Node.js + Fastify, Drizzle ORM, 별도 `finance-web`/`finance-api` 워크스페이스, AI 분석 보고서 게시 경로, OCI 인증 운영 방법.
