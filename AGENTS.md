@@ -23,6 +23,7 @@ GitHub Description (확정 문구):
 ## 결정·제약
 
 - **확정**: DevFlowOps 이름 및 목적, 검증용 Finance App, React + TypeScript + Vite, pnpm Workspaces, Turborepo, SQLite, Vitest, Playwright, GitHub, GitHub Actions, Docker/Compose, GHCR.
+- **추가된 목표 범위**: 단일 모노레포에서 플랫폼 관리 화면과 검증 대상 앱을 함께 개발한다. 관리 화면은 앱별 테스트 실행 요청과 CI/CD·배포 후 QA 결과 추적을 제공한다. GitHub 기반 실행을 활용하며 조회부터 도입한다. 현재 미구현이며 플랫폼 API·인증·저장 방식은 미확정이다.
 - **선택된 인프라 목표**: OCI Always Free Ampere A1. 실제 할당, 자원, 적합성은 검증 전이다.
 - **선택된 AI 방향**: Codex CLI와 사용자의 ChatGPT 구독 로그인으로 **별도의 유료 API 종량제 사용을 피하는 방향**. OCI 서버에서 무인 실행은 아직 검증하지 않았다.
 - **추천/미확정**: Node.js + Fastify, Drizzle ORM, 별도 `finance-web`/`finance-api` 워크스페이스, AI 분석 보고서 게시 경로, OCI 인증 운영 방법.
@@ -47,6 +48,7 @@ GitHub Description (확정 문구):
 ## 권장 작업 순서
 
 - **초기**: repository bootstrap → Finance MVP → Vitest/Playwright → GitHub Actions → GHCR/OCI 배포 → post-deploy QA → AI 분석.
+- QA 수집·결과 계약을 마련한 뒤 관리 화면의 결과 조회 → 제한된 테스트 실행 → 앱 추가 설정으로 확장한다. AI 분석 완료는 관리 화면의 선행 조건이 아니다.
 - 단, OCI A1 확보와 Codex CLI 원격 인증·ARM64 실행 PoC는 초기에 병행한다.
 - CI 실패 분석(배포 전)과 배포 후 품질 분석은 서로 다른 트리거를 사용하되 Agent의 수집·분석·리포팅 기능을 재사용한다.
 - 변경 영향도에 따른 테스트 선택은 먼저 pnpm/Turbo 의존성 그래프와 정적 규칙으로 수행한다. AI는 테스트 누락과 위험 시나리오 제안을 보완한다.
