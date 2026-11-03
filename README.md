@@ -27,6 +27,7 @@ Codex CLI는 이 ChatGPT 웹 대화 전체를 그대로 이어받는 것이 아�
 5. [`docs/AI_QUALITY_AGENT.md`](docs/AI_QUALITY_AGENT.md) — AI 관련 작업의 구체적인 책임과 범위.
 6. [`docs/ROADMAP.md`](docs/ROADMAP.md) — 순차 구현 계획과 완료 기준.
 7. [`docs/DEVELOPMENT_GUIDE.md`](docs/DEVELOPMENT_GUIDE.md) — Windows/Linux 공용 개발 규칙.
+8. [`docs/TECH_STACK.md`](docs/TECH_STACK.md) — 기술 선택 이유와 서버 관리·배포 방향.
 
 ### Codex 첫 요청 예시
 
@@ -41,6 +42,10 @@ AI 자체가 목적이 아니라 개발·테스트·배포·품질 검증을 자
 
 현재 구현은 `apps/finance-web`과 `apps/platform-web`의 React + TypeScript + Vite 기본 화면 및 pnpm Workspaces / Turborepo 설정이다. 포털은 관리 앱, 검증·배포 단계, 실행 이력의 빈 상태를 제공한다. Finance 기능, API, 실제 결과 조회·테스트 실행, 테스트 도구, CI/CD, 배포 및 AI 분석은 아직 구현하지 않았다.
 
+백엔드는 같은 모노레포의 `apps/finance-server`와 `apps/platform-server`로 관리하며, 현재 폴더 구조와 안내 문서만 있다. Hono + Node.js를 사용하고 Finance의 DB 접근은 Drizzle + `node:sqlite` + SQLite로 구성하기로 선택했다. 두 서버 모두 `package.json`이 없으므로 현재 pnpm/Turborepo 실행 대상에는 포함되지 않는다.
+
+Finance와 포털 프론트엔드는 각각의 Nginx 컨테이너로 별도 배포하는 방향을 선택했다. 컨테이너 간 API 통신에는 Docker 네트워크를 활용하되, 서버 컨테이너 구성과 네트워크·외부 접근 상세 설정은 미확정이다. Dockerfile과 Compose 설정은 아직 없다.
+
 ### 환경 및 실행
 
 - Node.js **24.22.2**: `.nvmrc` 및 루트 `package.json`의 `engines`에 고정.
@@ -54,16 +59,18 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-`pnpm dev`는 두 앱을 함께 실행한다. 포털은 `http://localhost:5174`(고정 포트), Finance 앱은 Vite가 출력하는 주소로 접속한다. 앱별 실행은 `pnpm dev:portal`, `pnpm dev:finance`를 사용한다. 루트에서 `pnpm lint`, `pnpm typecheck`, `pnpm build`를 사용할 수 있다. 테스트 명령은 테스트 도구를 도입하는 단계에 추가한다.
+`pnpm dev`는 두 프론트엔드 앱을 함께 실행한다. 포털은 `http://localhost:5174`(고정 포트), Finance 앱은 Vite가 출력하는 주소로 접속한다. 앱별 실행은 `pnpm dev-portal`, `pnpm dev-finance`를 사용한다. 루트에서 `pnpm lint`, `pnpm typecheck`, `pnpm build`를 사용할 수 있다. 테스트 명령은 테스트 도구를 도입하는 단계에 추가한다.
 
 ### 현재 구조
 
 - `apps/finance-web/src/app`: 검증 대상 앱의 진입 화면과 전체 구성.
 - `apps/platform-web/src/app`: 개발 포털의 관리 앱·검증 단계·실행 이력 기본 화면.
+- `apps/finance-server`: Finance 백엔드의 폴더 구조만 준비. 실행 코드·패키지 설정 없음.
+- `apps/platform-server`: 관리 포털 백엔드의 폴더 구조만 준비. 실행 코드·패키지 설정 없음.
 - `docs`: 설계, 결정 및 개발 규칙.
 - 루트 설정: 워크스페이스, 작업 그래프, lint 및 개발 환경 표준화.
 
-관리 화면 `apps/platform-web`의 기본 뼈대는 추가했으며, 후속 목표는 앱과 분리된 플랫폼 API 계층과 공통 QA 실행 도구다. 상세 책임과 도입 순서는 [아키텍처](docs/ARCHITECTURE.md#8-플랫폼-관리-화면과-앱별-실행-구조)를 따른다. 플랫폼 API와 QA 실행 도구 및 실제 연동 기능은 아직 없다.
+관리 화면 `apps/platform-web`의 기본 뼈대와 플랫폼 백엔드 `apps/platform-server`의 폴더 구조를 준비했다. 상세 책임과 도입 순서는 [아키텍처](docs/ARCHITECTURE.md#8-플랫폼-관리-화면과-앱별-실행-구조)를 따른다. 플랫폼 API 구현과 공통 QA 실행 도구, 실제 연동 기능은 아직 없다.
 
 공용 패키지는 실제 재사용이 발생할 때 추가한다. API, E2E, 인프라, Quality Agent는 해당 구현 단계에서 추가한다. 향후 CI와 Docker에서도 동일한 Node/pnpm 버전을 사용한다.
 

@@ -10,6 +10,8 @@
 - GitHub 저장소 이름: 예시 `devflowops` / `devflowops-platform`. 실제 원격 저장소명은 현재 파일로 확인해야 하며 문서가 보장하지 않는다.
 - GitHub Description (선택된 한 문장): **An AI-assisted frontend development platform that automates testing, CI/CD, deployment, and quality assurance.**
 - 플랫폼과 검증 대상 앱은 단일 모노레포에서 함께 개발한다. 앱별 검증·배포 단위는 분리할 수 있다.
+- 백엔드도 같은 모노레포에서 별도 `package.json`을 가진 워크스페이스 패키지로 관리한다. Finance 서버는 `apps/finance-server`에 폴더 구조만 생성했으며 `package.json`과 실행 코드는 없다. HTTP API·비즈니스 로직·DB 접근·마이그레이션은 Finance 서버가 소유한다.
+- 관리 포털의 백엔드는 `apps/platform-server`로 분리하고 폴더 구조만 생성했다. 실행 이력 저장 방식과 인증·GitHub 연동은 아직 구현·확정하지 않았다.
 - 플랫폼 관리 화면: 앱별 테스트 실행 요청과 CI/CD·배포 후 QA 결과를 연결하는 개발자 포털을 제공한다. 코드 저장·리뷰와 CI/CD 실행 기반은 GitHub/GitHub Actions가 담당한다.
 - 앱: 소규모 개인 Finance App. 이 앱 자체의 시장성이나 소비자용 AI 기능이 목적이 아니다.
 
@@ -18,14 +20,19 @@
 | 계층 | 결정 |
 |---|---|
 | 웹 앱 | React + TypeScript + Vite |
+| 백엔드 API 프레임워크 | Hono (선택 확정, 구현 전; 근거: [TECH_STACK.md](TECH_STACK.md)) |
+| 백엔드 런타임 | Node.js (저장소 고정 버전 사용, API 실행 구성은 구현 전) |
 | 패키지·모노레포 | pnpm + pnpm Workspaces |
 | 실행·캐시 | Turborepo |
 | DB | SQLite |
+| ORM | Drizzle ORM (선택 확정, DB 연동 구현 전; 근거: [TECH_STACK.md](TECH_STACK.md)) |
+| SQLite 드라이버 | Node.js 내장 `node:sqlite` (선택 확정, RC 상태 및 Drizzle 연동 검증 필요) |
 | 단위/통합 테스트 | Vitest |
 | E2E | Playwright |
 | 형상관리 | GitHub |
 | CI/CD | GitHub Actions (GitLab CI 사용하지 않음) |
 | 컨테이너 | Docker + Docker Compose |
+| 웹 배포 방향 | Finance와 포털을 각각의 Nginx 컨테이너로 별도 배포 (구현 전) |
 | Registry | GitHub Container Registry / GHCR (Harbor 사용하지 않음) |
 | 운영 목표 | OCI Always Free Ampere A1 (linux/arm64) |
 | AI 분석 인터페이스 | Codex CLI |
@@ -35,11 +42,11 @@
 
 ## C. 추천이지만 미확정
 
-- API: Node.js 기반; **Fastify**는 추천안이지 확정이 아님.
-- ORM: **Drizzle ORM** 추천, 확정 아님.
-- `apps/finance-web` + `apps/finance-api` 분리: 권장 폴더 레이아웃, 실제 앱 구조는 구현하며 확정.
+- Drizzle 패키지 버전, 스키마와 마이그레이션 도구·실행 절차는 미확정이다. SQLite 드라이버는 `node:sqlite`로 확정했으며 고정 Node.js 버전과 Drizzle의 연동은 검증 전이다.
+- 웹/서버의 워크스페이스 분리와 두 프론트엔드의 Nginx 별도 배포 방향은 확정했다. 컨테이너 간 API 통신은 Docker 네트워크를 활용하되, 서버 컨테이너 구성과 네트워크 범위·포트·도메인·HTTPS는 미확정이다.
+- API 입력 검증 방식과 라이브러리, Finance 테이블·제약조건·금액 및 날짜 저장 형식, DB 영속 볼륨의 상세 구성과 백업·복원 절차는 미확정이다.
 - GitHub Actions 배포 트리거, OCI Agent 트리거, 보고서 게시 방식 및 운영 접근 통제: 구현 전 상세 설계 필요.
-- 플랫폼 API의 프레임워크·배포 단위, GitHub 연동 인증, 접근 제어, 실행 이력 저장·동기화 방식, 앱 등록 설정 형식: 구현 전 결정한다.
+- 플랫폼 API의 배포 단위, GitHub 연동 인증, 접근 제어, 실행 이력 저장·동기화 방식, 앱 등록 설정 형식: 구현 전 결정한다.
 - AI Quality Agent의 세부 구현 언어, 결과 JSON 스키마, 프롬프트/인증 운영: 미확정.
 
 ## D. Finance App 최소 기능(MVP)
@@ -77,7 +84,9 @@
 
 ## G. 아직 하지 않았다고 간주할 것
 
-실제 파일·워크플로·커밋/배포 증거를 확인하기 전까지 다음 항목을 완료했다고 표시하지 말 것: 모노레포 설치, Finance App 구현, OCI 인스턴스 확보, CI/CD, GHCR 이미지, Playwright E2E, Codex Agent 무인 실행, 성과 측정.
+현재 파일 기준으로 pnpm/Turborepo 설정과 두 프론트엔드의 기본 화면, 두 서버의 폴더 구조가 있다. 서버에는 `package.json`과 실행 코드가 없고, 폴더는 `.gitkeep`으로 추적한다. 서버 패키지 등록·실행, Finance 기능, 테스트 도구, CI/CD, Docker 배포, 실제 결과 연동과 AI 분석은 미구현이다.
+
+OCI 인스턴스 확보, Drizzle과 `node:sqlite`의 버전 호환성, Windows 및 Linux/ARM64 실행, Codex 원격 무인 실행과 성과 측정은 실제 증거를 확인하기 전까지 검증 완료로 표시하지 않는다. 의존성 폴더나 설정 파일의 존재만으로 실행·빌드 성공을 보장하지 않는다.
 
 ## H. 플랫폼 관리 화면의 범위
 

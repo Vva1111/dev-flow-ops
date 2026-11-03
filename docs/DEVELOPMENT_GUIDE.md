@@ -47,7 +47,9 @@ pnpm dev
 
 버전 출력은 각각 `v24.22.2`, `10.34.6`이어야 한다. `node_modules`는 Windows와 WSL/Linux 사이에 공유하거나 복사하지 않는다. 같은 소스와 lockfile로 각 환경에서 설치하며, esbuild/Rollup/Turbo의 바이너리는 OS와 CPU에 맞게 설치된다.
 
-`pnpm dev`는 Finance 앱과 개발 포털을 함께 실행한다. 포털은 `http://localhost:5174`로 접속하며 포트 사용 중에는 오류로 종료한다. 포털만 실행하려면 `pnpm dev:portal`를 사용한다. Finance 앱만 실행하려면 `pnpm dev:finance`를 사용한다.
+`pnpm dev`는 Finance와 개발 포털의 프론트엔드를 함께 실행한다. 포털은 `http://localhost:5174`로 접속하며 포트 사용 중에는 오류로 종료한다. 포털만 실행하려면 `pnpm dev-portal`을 사용한다. Finance 프론트엔드만 실행하려면 `pnpm dev-finance`를 사용한다.
+
+백엔드는 같은 모노레포의 `apps/finance-server`, `apps/platform-server`에서 별도 패키지로 관리하는 것으로 결정했다. 현재 두 서버는 README와 `.gitkeep`을 포함한 폴더 구조만 있으며 `package.json`과 실행 코드가 없다. 따라서 위 실행 명령으로 서버가 시작되지는 않는다. 서버 패키지를 구현할 때 같은 Node/pnpm 고정 버전을 사용한다.
 
 현재 구현된 검사·빌드 명령은 다음과 같다.
 

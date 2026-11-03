@@ -43,15 +43,16 @@ devflowops/
 ├── docs/
 │   ├── PROJECT_CONTEXT.md
 │   ├── DECISIONS.md
+│   ├── TECH_STACK.md
 │   ├── ARCHITECTURE.md
 │   ├── AI_QUALITY_AGENT.md
 │   ├── ROADMAP.md
 │   └── DEVELOPMENT_GUIDE.md
 ├── apps/
-│   ├── platform-web/         # 관리 UI: 결과 조회 → 테스트 실행 요청
-│   ├── platform-api/         # 권장안: 앱 설정, 실행 요청, 결과 조회/수집
-│   ├── finance-web/          # React + TypeScript + Vite
-│   └── finance-api/          # Node API, framework TBD
+│   ├── platform-web/        # 관리 UI: 결과 조회 → 테스트 실행 요청
+│   ├── platform-server/     # 포털 백엔드 (폴더 구조만 생성, 실행 코드 없음)
+│   ├── finance-web/         # React + TypeScript + Vite
+│   └── finance-server/      # Hono API (폴더 구조만 생성, 실행 코드 없음)
 ├── packages/
 │   ├── ui/                   # 공용 표현 컴포넌트
 │   ├── domain/               # 공유할 가치가 있는 순수 계약/계산
@@ -75,7 +76,11 @@ devflowops/
 └── package.json
 ```
 
-이 폴더 구조는 **목표 예시**다. 실제 사용하는 패키지만 생성한다. 특히 두 번째 데모 앱은 불필요하다. `platform-web`은 플랫폼 자체 기능이며 추가 데모 앱이 아니다. `platform-api`의 별도 앱 구성은 미확정이다. 앱별 테스트는 각 앱에서 관리하고 루트 `tests/e2e`는 필요한 앱 간 시나리오에만 사용한다. `packages/*`나 실행 가능한 `tools/*`를 워크스페이스 패키지로 도입할 때 pnpm workspace glob도 함께 추가한다.
+이 폴더 구조에는 **현재 파일과 목표 예시가 함께 포함**되어 있다. `finance-server`와 `platform-server`는 폴더 구조만 생성했으며, 공용 패키지·실행 도구·인프라는 필요한 구현 단계에 추가한다. 특히 두 번째 데모 앱은 불필요하다. `platform-web`은 플랫폼 자체 기능이며 추가 데모 앱이 아니다. 앱별 테스트는 각 앱에서 관리하고 루트 `tests/e2e`는 필요한 앱 간 시나리오에만 사용한다. `packages/*`나 실행 가능한 `tools/*`를 워크스페이스 패키지로 도입할 때 pnpm workspace glob도 함께 추가한다.
+
+백엔드도 현재 모노레포에서 별도 워크스페이스 패키지로 관리하기로 확정했다. 각 서버는 자체 `package.json`으로 서버 의존성과 작업 명령을 관리하고, 루트 pnpm/Turborepo로 전체 작업을 실행하는 구성을 목표로 한다. `apps/finance-server`에는 `src/routes`, `src/db`, `migrations`, `data`를, `apps/platform-server`에는 `src/routes`, `src/integrations/github`, `src/results`를 준비했다. 두 서버 모두 안내 문서와 빈 폴더 추적용 `.gitkeep`만 있으며 `package.json`이 없어 아직 실행 가능한 워크스페이스 패키지가 아니다. 플랫폼의 저장 방식과 인증, 서버 컨테이너·배포 구성은 별도 설계한다.
+
+Finance의 HTTP API·비즈니스 로직·Drizzle 스키마·DB 연결·마이그레이션은 `finance-server`가 소유한다. 프론트엔드는 HTTP로 서버에 접근하고 ORM이나 DB를 직접 사용하지 않는다. `data/`는 로컬 개발용 위치이며 실제 DB 파일은 Git에서 제외한다. 플랫폼의 `results/`는 결과 수집·연결 코드를 둘 위치이며 DB나 원본 로그·Artifact를 저장하는 디렉터리가 아니다.
 
 ## 3. 개발/빌드 플랫폼
 
@@ -106,12 +111,17 @@ AI 호출 성공 여부는 기본 PR 검사·빌드 성공의 조건과 분리�
 
 ## 5. OCI 런타임의 분리
 
-- 상시 실행: Nginx(React 정적 배포/프록시), Node API, SQLite(호스트 볼륨).
+- 웹 배포 방향은 Finance와 포털을 각각의 Nginx 컨테이너로 별도 배포하는 것으로 선택했다. 하나의 공통 웹 이미지에 두 프론트엔드를 묶는 제안은 채택하지 않았다. Dockerfile·Compose 설정은 아직 없다.
+- 상시 실행 목표: 앱별 Nginx(React 정적 배포/프록시), Node.js 백엔드. 서버 컨테이너의 통합·분리와 구체적인 서비스 구성은 미확정이다.
+- SQLite는 Finance 서버가 `node:sqlite`로 접근하는 파일이며 별도의 DB 서버 컨테이너를 만들지 않는다. 운영 DB 디렉터리는 영속 볼륨에 두고 소스·이미지와 분리한다. 볼륨 종류·경로와 일관된 백업·복원 방식은 상세 설계 전이다.
+- 컨테이너 간 필요한 API 통신은 Docker 네트워크에서 서비스 이름과 내부 포트를 사용하는 방향이다. 브라우저에서 실행되는 React 코드는 Docker 내부 서비스 이름으로 직접 접근하지 않는다. 네트워크 범위·포트·도메인·HTTPS·프록시와 접근 제어는 별도 설계한다.
+- Finance와 플랫폼 서버 간 직접 통신은 실제 필요한 기능에 한해 추가한다. 네트워크 연결만을 위해 두 서버가 서로 의존하도록 만들지 않는다.
 - 필요 시 실행: Playwright test runner / Quality Agent / Codex CLI.
 - 운영 앱의 DB를 변경하는 E2E는 금지. 변경/삭제 테스트는 별도 데이터베이스 및 격리된 환경에서만 실행한다.
 - Agent의 Docker socket, SSH 키, OCI 관리자 자격증명, 운영 데이터 접근은 기본적으로 제공하지 않는다.
 - 테스트를 실행한 다음 브라우저를 종료하고 AI 분석을 수행하는 방식으로 제한된 CPU/메모리를 활용한다.
 - 프로덕션 서비스는 Vite dev server가 아니라 빌드된 정적 번들을 제공한다.
+- 앱별 배포 후 QA는 대상 주소와 배포 커밋·버전을 연결한다. 웹 컨테이너 분리가 단위·API 테스트의 책임을 바꾸지는 않으며, 공용 코드 변경 시 영향받는 앱을 함께 검증한다.
 
 ## 6. 결과 추적 및 보고
 
@@ -135,14 +145,14 @@ GitHub 저장소의 공개 여부 자체는 OCI 인스턴스에 비밀 정보가
 
 ## 8. 플랫폼 관리 화면과 앱별 실행 구조
 
-**관리 화면의 정적 기본 뼈대만 구현했으며 아래 연동 구조는 목표 설계다.** 같은 모노레포에서 플랫폼 UI·실행 도구·대상 앱을 관리한다. GitHub는 코드·리뷰와 CI/CD 실행 기반을, 관리 화면은 앱별 실행 및 품질 추적을 담당한다.
+**관리 화면의 정적 기본 뼈대와 플랫폼 서버 폴더 구조만 있으며 아래 연동 구조는 목표 설계다.** 같은 모노레포에서 플랫폼 UI·실행 도구·대상 앱을 관리한다. GitHub는 코드·리뷰와 CI/CD 실행 기반을, 관리 화면은 앱별 실행 및 품질 추적을 담당한다.
 
 ### 책임과 데이터 흐름
 
 | 구성 요소 | 책임 |
 |---|---|
 | `apps/platform-web` | 앱 현황, 실행 이력·상세, CI/CD·배포 후 QA 결과, 허용된 테스트 실행 요청 |
-| 플랫폼 API 계층 (`apps/platform-api` 권장) | 앱 설정 검증, 실행 요청 접수, 실행 상태·결과 조회, GitHub 연동 |
+| 플랫폼 서버 (`apps/platform-server`, 폴더 구조만 생성) | 앱 설정 검증, 실행 요청 접수, 실행 상태·결과 조회, GitHub 연동 |
 | GitHub Actions / QA 실행기 | 허용된 작업 실행, 결정론적 결과와 증거 생성 |
 | `tools/quality-agent` | CLI/CI/관리 화면에서 재사용하는 수집·실행·보고, 선택적 AI 분석 |
 | 대상 앱 (`apps/finance-web` 등) | 기능 코드, 테스트 시나리오, 앱별 실행 설정 |

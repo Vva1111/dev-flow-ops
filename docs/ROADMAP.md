@@ -23,7 +23,11 @@
 
 ## Week 2 — Finance App API 및 도메인
 
-- [ ] API 프레임워크와 ORM 최종 결정(현재 추천: Fastify/Drizzle).
+- [x] API 프레임워크 결정: Hono (2026-11-03, 도입 및 구현 전).
+- [x] ORM 결정: Drizzle ORM (2026-11-03, 도입 및 DB 연동 구현 전).
+- [x] 백엔드 런타임과 SQLite 드라이버 선택: Node.js + `node:sqlite` (연동 검증 전).
+- [x] `apps/finance-server`의 폴더 구조 생성 (README·`.gitkeep`만 추가).
+- [ ] 서버 `package.json`·실행·빌드 구성과 Drizzle 버전 호환성 검증.
 - [ ] SQLite 스키마 및 마이그레이션 정의.
 - [ ] Transaction/Category API와 집계 함수.
 - [ ] 월말/연말/CRUD 통계 로직에 대한 테스트.
@@ -50,6 +54,8 @@
 
 ## Week 5 — GHCR / OCI 배포 자동화
 
+- [x] Finance·포털 프론트엔드를 각각의 Nginx 컨테이너로 별도 배포하는 방향 선택 (구현 전).
+- [ ] 서버 컨테이너 구성, Docker 네트워크 범위·포트·외부 접근 상세 설계.
 - [ ] production Dockerfile 및 ARM64 빌드.
 - [ ] GHCR 이미지 발행과 SHA 태깅.
 - [ ] OCI 호스트 Docker Compose, SQLite 영속 볼륨, HTTPS, 접근 통제 및 백업.
@@ -89,7 +95,8 @@
 
 정적 UI 기본 뼈대(`apps/platform-web`)는 먼저 추가했다. 실제 결과 조회는 QA 결과 계약과 수집이 동작한 뒤 진행한다. AI 분석 완료를 선행 조건으로 두지 않는다.
 
-- [ ] `apps/platform-web`과 플랫폼 API 계층의 최소 구성 및 접근 제어 설계.
+- [x] 플랫폼 백엔드 경로를 `apps/platform-server`로 확정하고 폴더 구조 생성 (README·`.gitkeep`만 추가).
+- [ ] `apps/platform-server`의 패키지·API 구현과 접근 제어·결과 저장 방식 설계.
 - [ ] Finance App을 첫 관리 대상으로 등록하고 앱별 실행/결과 계약 정의.
 - [ ] CI/CD·테스트·배포 후 QA 결과를 앱·커밋·환경·배포 버전으로 연결.
 - [ ] 앱 현황, 실행 이력/상세, 원본 로그·Artifact 링크 제공.

@@ -13,6 +13,7 @@ GitHub Description (확정 문구):
 
 - `docs/PROJECT_CONTEXT.md` — 목표, 확정 스택, 제약, 범위
 - `docs/DECISIONS.md` — 확정 / 추천 / 미검증의 구분
+- `docs/TECH_STACK.md` — 기술 선택 이유와 서버 관리·배포 방향
 - `docs/ARCHITECTURE.md` — 시스템 및 폴더 구조, CI/CD
 - `docs/AI_QUALITY_AGENT.md` — AI Agent 기능과 안전한 실행 계약
 - `docs/ROADMAP.md` — 우선순위 및 각 단계의 완료 조건
@@ -23,10 +24,16 @@ GitHub Description (확정 문구):
 ## 결정·제약
 
 - **확정**: DevFlowOps 이름 및 목적, 검증용 Finance App, React + TypeScript + Vite, pnpm Workspaces, Turborepo, SQLite, Vitest, Playwright, GitHub, GitHub Actions, Docker/Compose, GHCR.
-- **추가된 목표 범위**: 단일 모노레포에서 플랫폼 관리 화면과 검증 대상 앱을 함께 개발한다. 관리 화면은 앱별 테스트 실행 요청과 CI/CD·배포 후 QA 결과 추적을 제공한다. GitHub 기반 실행을 활용하며 조회부터 도입한다. 현재 관리 화면의 기본 뼈대만 있으며 실제 연동은 미구현이다. 플랫폼 API·인증·저장 방식은 미확정이다.
+- **추가된 목표 범위**: 단일 모노레포에서 플랫폼 관리 화면과 검증 대상 앱을 함께 개발한다. 관리 화면은 앱별 테스트 실행 요청과 CI/CD·배포 후 QA 결과 추적을 제공한다. GitHub 기반 실행을 활용하며 조회부터 도입한다. 현재 관리 화면의 기본 뼈대와 `apps/platform-server` 폴더 구조만 있으며 실제 연동은 미구현이다. 플랫폼 인증·저장 방식은 미확정이다.
 - **선택된 인프라 목표**: OCI Always Free Ampere A1. 실제 할당, 자원, 적합성은 검증 전이다.
 - **선택된 AI 방향**: Codex CLI와 사용자의 ChatGPT 구독 로그인으로 **별도의 유료 API 종량제 사용을 피하는 방향**. OCI 서버에서 무인 실행은 아직 검증하지 않았다.
-- **추천/미확정**: Node.js + Fastify, Drizzle ORM, 별도 `finance-web`/`finance-api` 워크스페이스, AI 분석 보고서 게시 경로, OCI 인증 운영 방법.
+- **확정된 API 프레임워크**: Hono. 도입 및 API 구현 전이며 선택 이유는 `docs/TECH_STACK.md`를 따른다.
+- **확정된 ORM**: Drizzle ORM. 도입 및 DB 연동 구현 전이며 마이그레이션 구성은 미확정이다.
+- **확정된 백엔드 런타임**: Node.js. 저장소의 고정 버전을 사용한다.
+- **확정된 SQLite 드라이버**: Node.js 내장 `node:sqlite`. 외부 드라이버 의존성을 줄이려는 선택이다. 현재 고정한 Node.js 24.22.2에서는 RC 상태이며 Drizzle 버전 호환성과 대상 환경 실행은 검증 전이다.
+- **확정된 서버 관리 방식**: 백엔드도 현재 모노레포 안에서 별도 `package.json`을 가진 워크스페이스 패키지로 관리한다. `apps/finance-server`와 `apps/platform-server`는 폴더 구조만 생성했으며 `package.json`과 실행 코드는 없다. Finance 서버는 HTTP API·비즈니스 로직·DB 접근·마이그레이션을 소유하고 플랫폼 서버는 GitHub 연동·실행 결과 연결을 담당한다. 플랫폼 저장 방식은 미확정이다.
+- **선택한 웹 배포 방향**: Finance와 포털 프론트엔드는 각각의 Nginx 컨테이너로 별도 배포한다. 컨테이너 간 API 통신은 Docker 네트워크를 활용하는 방향이며 네트워크 범위·포트·도메인·HTTPS와 서버 컨테이너 구성은 상세 설계 전이다. Docker 설정은 아직 없다.
+- **추천/미확정**: AI 분석 보고서 게시 경로, OCI 인증 운영 방법.
 - **금지할 가정**: ChatGPT Pro 인증이 OCI에서 영구적·무제한·무중단 자동 실행된다는 주장, OCI 무료 인스턴스가 이미 확보되었다는 주장, AI 분석이 정확하다는 주장.
 - **비용 원칙**: 모델 API Key 과금이 필요한 구성을 사용자 승인 없이 도입하지 않는다. AI 기능이 불가능해도 결정론적 CI/CD와 테스트는 정상 동작해야 한다.
 
@@ -52,6 +59,12 @@ GitHub Description (확정 문구):
 - 단, OCI A1 확보와 Codex CLI 원격 인증·ARM64 실행 PoC는 초기에 병행한다.
 - CI 실패 분석(배포 전)과 배포 후 품질 분석은 서로 다른 트리거를 사용하되 Agent의 수집·분석·리포팅 기능을 재사용한다.
 - 변경 영향도에 따른 테스트 선택은 먼저 pnpm/Turbo 의존성 그래프와 정적 규칙으로 수행한다. AI는 테스트 누락과 위험 시나리오 제안을 보완한다.
+
+## 언어 규칙
+
+- 사용자에게 보내는 답변, 진행 상황, 작업 요약은 한국어로 작성한다. 사용자가 다른 언어를 명시적으로 요청한 경우에만 해당 요청을 따른다.
+- 문서와 설명용 주석도 한국어로 작성한다. 코드 식별자, 명령어, 경로, 기술명과 원문 인용 등 원형을 유지해야 하는 내용은 예외로 한다.
+- 한국어 문장에 일본어 등 다른 언어의 조사나 문장부호가 섞이지 않도록 응답 및 변경 내용을 확인한다.
 
 ## 응답 형식
 
