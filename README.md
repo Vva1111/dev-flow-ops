@@ -14,6 +14,8 @@ DevFlowOps는 **개발 → 검증 → 빌드 → 배포 → 배포 후 품질 �
 - 검증 지표: 변경 영향에 따른 작업 실행 효율, CI 검사 시간, 배포 소요 시간, 실패 진단 품질, 테스트 누락 탐지의 유효성.
 - 이 저장소의 문서는 **설계/작업 컨텍스트**이며, 문서에 적힌 기능이 현재 구현되어 있다는 뜻이 아니다.
 
+현재 개발 단계와 다음 작업은 [개발 진행 현황](docs/DEVELOPMENT_STATUS.md)에서 간단히 확인할 수 있다. Finance는 소비·자산·계획을 함께 관리하는 개인 금융 관리 앱이며, 현재는 퍼블리싱 초안 단계다.
+
 ## Codex CLI: 이전 ChatGPT 대화 대신 이 문서 사용
 
 Codex CLI는 이 ChatGPT 웹 대화 전체를 그대로 이어받는 것이 아니다. 따라서 **프로젝트 루트의 `AGENTS.md`와 아래 문서가 지속적인 기준**이다.
@@ -40,7 +42,7 @@ AI 자체가 목적이 아니라 개발·테스트·배포·품질 검증을 자
 
 ## 작업 시작
 
-현재 구현은 `apps/finance-web`과 `apps/platform-web`의 React + TypeScript + Vite 기본 화면 및 pnpm Workspaces / Turborepo 설정이다. 포털은 관리 앱, 검증·배포 단계, 실행 이력의 빈 상태를 제공한다. Finance 기능, API, 실제 결과 조회·테스트 실행, 테스트 도구, CI/CD, 배포 및 AI 분석은 아직 구현하지 않았다.
+현재 구현은 React + TypeScript + Vite 기반의 Finance 목업 대시보드와 포털 기본 화면 및 pnpm Workspaces / Turborepo 설정이다. Finance는 수입·지출, 자산·부채, 예산, 저축 목표를 한 페이지에서 보여 주고, 메뉴의 영역 이동과 최근 내역 종류 필터를 제공한다. 모든 금융 데이터는 예시이며 실제 입력·저장과 API 연동은 구현 전이다. 포털은 관리 앱, 검증·배포 단계, 실행 이력의 빈 상태를 제공한다. 실제 결과 조회·테스트 실행, 테스트 도구, CI/CD, 배포 및 AI 분석은 아직 구현하지 않았다.
 
 백엔드는 같은 모노레포의 `apps/finance-server`와 `apps/platform-server`로 관리하며, 현재 폴더 구조와 안내 문서만 있다. Hono + Node.js를 사용하고 Finance의 DB 접근은 Drizzle + `node:sqlite` + SQLite로 구성하기로 선택했다. 두 서버 모두 `package.json`이 없으므로 현재 pnpm/Turborepo 실행 대상에는 포함되지 않는다.
 

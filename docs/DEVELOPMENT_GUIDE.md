@@ -59,6 +59,8 @@ pnpm typecheck
 pnpm build
 ```
 
+문서에는 한글과 영문자만 사용한다. 숫자, 일반 문장부호, Markdown 문법과 도식용 기호는 허용하며 한자·일본어·그 밖의 언어 문자와 전각·일본어 문장부호는 금지한다. 인용도 필요한 경우 한국어로 번역한다. `pnpm lint:docs`로 Git이 추적하거나 아직 추가하지 않은 Markdown 파일(`.md`, `.mdx`, Git 제외 파일은 제외)을 검사한다. 루트 `pnpm lint`도 이 검사를 먼저 실행하며, 위반 시 파일·행·열과 문자 코드를 출력하고 실패한다.
+
 테스트 도구와 `pnpm test`는 아직 구현하지 않았다. GitHub Actions와 Docker 환경도 아직 미구현이며, 도입 시 동일한 Node/pnpm 버전과 frozen lockfile 설치를 사용한다.
 
 ## 4. Git / PR 습관
