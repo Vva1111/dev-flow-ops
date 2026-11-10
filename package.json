@@ -10,7 +10,8 @@
   },
   "scripts": {
     "dev": "turbo run dev",
-    "dev-finance": "pnpm --filter @devflowops/finance-web dev",
+    "dev-finance": "turbo run dev --filter=@devflowops/finance-web --filter=@devflowops/finance-server",
+    "dev-finance-server": "pnpm --filter @devflowops/finance-server dev",
     "dev-portal": "pnpm --filter @devflowops/platform-web dev",
     "build": "turbo run build",
     "lint": "pnpm lint:docs && turbo run lint",

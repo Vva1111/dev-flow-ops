@@ -52,7 +52,7 @@ devflowops/
 │   ├── platform-web/        # 관리 UI: 결과 조회 → 테스트 실행 요청
 │   ├── platform-server/     # 포털 백엔드 (폴더 구조만 생성, 실행 코드 없음)
 │   ├── finance-web/         # React + TypeScript + Vite
-│   └── finance-server/      # Hono API (폴더 구조만 생성, 실행 코드 없음)
+│   └── finance-server/      # Hono CRUD API·SQLite 저장·Swagger UI
 ├── packages/
 │   ├── ui/                   # 공용 표현 컴포넌트
 │   ├── domain/               # 공유할 가치가 있는 순수 계약/계산
@@ -76,11 +76,26 @@ devflowops/
 └── package.json
 ```
 
-이 폴더 구조에는 **현재 파일과 목표 예시가 함께 포함**되어 있다. `finance-server`와 `platform-server`는 폴더 구조만 생성했으며, 공용 패키지·실행 도구·인프라는 필요한 구현 단계에 추가한다. 특히 두 번째 데모 앱은 불필요하다. `platform-web`은 플랫폼 자체 기능이며 추가 데모 앱이 아니다. 앱별 테스트는 각 앱에서 관리하고 루트 `tests/e2e`는 필요한 앱 간 시나리오에만 사용한다. `packages/*`나 실행 가능한 `tools/*`를 워크스페이스 패키지로 도입할 때 pnpm workspace glob도 함께 추가한다.
+이 폴더 구조에는 **현재 파일과 목표 예시가 함께 포함**되어 있다. `finance-server`는 서버 실행, 수입·지출 CRUD·DB 저장과 Swagger UI를 구성했고 `platform-server`는 폴더 구조만 있으며, 공용 패키지·실행 도구·인프라는 필요한 구현 단계에 추가한다. 특히 두 번째 데모 앱은 불필요하다. `platform-web`은 플랫폼 자체 기능이며 추가 데모 앱이 아니다. 앱별 테스트는 각 앱에서 관리하고 루트 `tests/e2e`는 필요한 앱 간 시나리오에만 사용한다. `packages/*`나 실행 가능한 `tools/*`를 워크스페이스 패키지로 도입할 때 pnpm workspace glob도 함께 추가한다.
 
-백엔드도 현재 모노레포에서 별도 워크스페이스 패키지로 관리하기로 확정했다. 각 서버는 자체 `package.json`으로 서버 의존성과 작업 명령을 관리하고, 루트 pnpm/Turborepo로 전체 작업을 실행하는 구성을 목표로 한다. `apps/finance-server`에는 `src/routes`, `src/db`, `migrations`, `data`를, `apps/platform-server`에는 `src/routes`, `src/integrations/github`, `src/results`를 준비했다. 두 서버 모두 안내 문서와 빈 폴더 추적용 `.gitkeep`만 있으며 `package.json`이 없어 아직 실행 가능한 워크스페이스 패키지가 아니다. 플랫폼의 저장 방식과 인증, 서버 컨테이너·배포 구성은 별도 설계한다.
+백엔드도 현재 모노레포에서 별도 워크스페이스 패키지로 관리하기로 확정했다. 각 서버는 자체 `package.json`으로 서버 의존성과 작업 명령을 관리하고, 루트 pnpm/Turborepo로 전체 작업을 실행하는 구성을 목표로 한다. `apps/finance-server`에는 `src/routes`, `src/db`, `migrations`, `data`를, `apps/platform-server`에는 `src/routes`, `src/integrations/github`, `src/results`를 준비했다. Finance 서버에는 패키지·실행 구성, 수입·지출 CRUD와 Zod 기반 입력 검증·OpenAPI·Swagger UI를 추가했다. Drizzle `1.0.0-rc.5`와 node:sqlite로 SQLite에 저장하고 서버 시작 시 버전별 SQL 마이그레이션을 적용한다. 개발 중에는 `node --watch src/index.ts`, 빌드 후에는 `node dist/index.js`로 실행한다. 로컬 `127.0.0.1:3001`의 `GET /api/health`를 제공하고 Finance Vite 개발 서버가 `/api` 요청을 전달한다. 플랫폼 서버는 안내 문서와 `.gitkeep`만 있어 아직 실행 가능한 패키지가 아니다. 플랫폼의 저장 방식과 인증, 서버 컨테이너·배포 구성은 별도 설계한다.
 
 Finance의 HTTP API·비즈니스 로직·Drizzle 스키마·DB 연결·마이그레이션은 `finance-server`가 소유한다. 프론트엔드는 HTTP로 서버에 접근하고 ORM이나 DB를 직접 사용하지 않는다. `data/`는 로컬 개발용 위치이며 실제 DB 파일은 Git에서 제외한다. 플랫폼의 `results/`는 결과 수집·연결 코드를 둘 위치이며 DB나 원본 로그·Artifact를 저장하는 디렉터리가 아니다.
+
+### 현재 Finance 서버의 내부 구성
+
+- `src/index.ts`: DB를 열고 `createApp(db)`로 앱을 구성한 뒤 HTTP 서버를 시작한다. 서버 종료 시 DB 연결을 닫는다.
+- `src/app.ts`: 상태 확인, 수입·지출 라우트 등록, 공통 오류 처리와 API 문서 경로를 구성한다.
+- `src/routes/transactions.contract.ts`: Zod 입력·응답 스키마, 요청 제약과 HTTP 응답 명세를 정의한다.
+- `src/routes/transactions.ts`: Drizzle로 거래 등록·목록·단건 조회·수정·삭제를 처리한다.
+- `src/db/schema.ts`, `src/db/client.ts`, `src/db/migrations.ts`: 테이블·DB 제약조건, 연결과 버전별 SQL 적용을 담당한다.
+- `migrations/0001_transactions.sql`: 초기 거래 테이블을 생성한다. 적용은 서버 시작 시 트랜잭션으로 수행하고 SQLite `user_version`에 기록한다.
+
+문서 경로는 `/api/docs`, 기계가 읽는 명세는 `/api/openapi.json`이다. 요청 검증과 문서 생성에는 같은 API 스키마를 사용하지만 Drizzle의 저장 스키마와는 책임을 구분한다. 응답의 런타임 검증은 구현 전이다.
+
+Finance 화면의 `src/features/transactions`는 API 요청, 조회·변경 상태, 입력 폼과 목록 UI를 소유한다. Vite의 `/api` 프록시를 통해 서버에 접근하며 성공 응답을 받은 뒤 목록을 갱신한다. 조회 실패 시 재시도를 제공하고 변경 실패 시 입력값을 유지한다. 초기 조회는 언마운트 시 취소하고 조회 중·변경 중에는 겹치는 변경 요청을 제한한다.
+
+대시보드의 현재 월 합계와 소비 분포는 같은 조회 내역에서 계산한다. 목록은 전체 기간이며 자산·예산·목표는 샘플로 유지한다. API 응답에는 계좌·이체 정보가 없으므로 입력·필터에 추가하지 않는다. 화면부터 DB까지의 연결 코드는 구현했지만 브라우저에서 전체 흐름을 실행하는 검증은 남아 있다.
 
 ## 3. 개발/빌드 플랫폼
 

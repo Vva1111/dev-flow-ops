@@ -9,7 +9,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['apps/*/src/**/*.{ts,tsx}'],
+    files: ['apps/*-web/src/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },
     plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
     rules: {
@@ -17,5 +17,5 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
-  { files: ['**/*.mjs'], languageOptions: { globals: globals.node } },
+  { files: ['apps/*-server/src/**/*.ts', '**/*.mjs'], languageOptions: { globals: globals.node } },
 )
