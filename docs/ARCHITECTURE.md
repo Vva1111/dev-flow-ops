@@ -1,16 +1,19 @@
 # ARCHITECTURE — DevFlowOps 목표 설계
 
-> **설계 문서. 실제 구현과 일치하는지 작업 시작 시 반드시 확인할 것.**
+> 목표 설계와 책임 경계를 관리하는 문서다. 현재 구현은 [개발 진행 현황](DEVELOPMENT_STATUS.md), 결정 상태는 [결정 기록](DECISIONS.md)을 따른다. 실제 파일과 일치하는지는 작업 시작 시 확인한다.
 
 ## 1. 시스템 개요
 
+이 흐름은 [개발 목표 유지 기준](PROJECT_CONTEXT.md#개발-목표-유지-기준)을 실행 구조로 표현한 목표 설계다. 개발자와 AI의 작업부터 검사·배포·QA·피드백까지 연결하되 검사 실행과 AI 분석의 성공 여부는 분리한다.
+
 ```mermaid
 flowchart TD
-  DEV[Developer PC - Windows / Linux\nReact + pnpm + Turborepo] --> GH[GitHub - branch / PR / main]
-  GH --> CI[GitHub Actions - lint / typecheck / Vitest / Playwright]
+  DEV[개발자 + AI 보조 개발\n단일 모노레포 - Windows / Linux] --> GH[GitHub - branch / PR / main]
+  GH --> CI[GitHub Actions\nlint / typecheck / Vitest / Playwright / build 검증]
   CI --> GATE{검증 성공?}
   GATE -- no --> ART[실패 로그 및 test artifacts]
-  ART --> ANALYSIS[AI Quality Agent - Codex CLI\nOCI 또는 검증된 실행 위치]
+  ART --> REPORT[검사 결과 및 증거 보고서\n앱 / 커밋 / 환경 / 실행 ID / 배포 버전]
+  ART -. 선택적 분석 .-> ANALYSIS[AI Quality Agent - Codex CLI\nOCI 또는 검증된 실행 위치]
   GATE -- yes + main --> BUILD[Docker linux/arm64 build]
   BUILD --> REG[GHCR - SHA tagged images]
   REG --> DEPLOY[OCI A1 - Docker Compose]
@@ -20,9 +23,12 @@ flowchart TD
   ISOLATED --> E2E[Playwright functional E2E]
   SMOKE --> EVIDENCE[Test evidence / logs / traces]
   E2E --> EVIDENCE
-  EVIDENCE --> ANALYSIS
-  ANALYSIS --> REPORT[AI advisory report + commit/deployment metadata]
+  EVIDENCE --> REPORT
+  EVIDENCE -. 선택적 분석 .-> ANALYSIS
+  ANALYSIS --> AI_REPORT[별도 AI 분석 상태와 근거 기반 제안]
+  AI_REPORT --> REPORT
   REPORT --> FEEDBACK[GitHub report / developer feedback]
+  FEEDBACK --> DEV
   CI --> SYNC[플랫폼 API - 결과 수집 및 연결]
   DEPLOY --> SYNC
   EVIDENCE --> SYNC
@@ -33,6 +39,10 @@ flowchart TD
 ```
 
 **주의:** CI 실패 이벤트와 배포 성공 이벤트는 서로 다르다. OCI에 배포되지 못한 CI 실패의 로그를 OCI Agent로 보내려면 **별도 연동·인증·트리거**가 필요하다. 다이어그램의 연결만으로 구현된 것이 아니다.
+
+PR 검증 실패는 배포로 진행하지 않고 결과·증거 보관과 개발자 수정으로 이어진다. 검증을 통과한 main 커밋만 이미지 빌드·GHCR 발행·배포로 연결한다. 배포 성공 후에는 실제 배포 버전을 대상으로 QA를 수행한다. AI 결과는 기본 보고서에 보조 정보로 연결하며, AI 응답을 기다리거나 AI 성공을 요구하지 않고 기본 결과를 생성·조회할 수 있어야 한다.
+
+개발 포털은 앱·커밋·환경·실행 ID와 배포 버전을 기준으로 CI·배포·QA·선택적 AI 분석 및 원본 증거를 연결한다. 조회를 먼저 구현하고 제한된 테스트 실행 요청으로 확장한다. AI 분석 완료는 포털 조회의 선행 조건이 아니다. 상세 책임은 [플랫폼 관리 화면과 앱별 실행 구조](#8-플랫폼-관리-화면과-앱별-실행-구조)를 따른다.
 
 ## 2. 권장 폴더 구조
 
@@ -50,9 +60,9 @@ devflowops/
 │   └── DEVELOPMENT_GUIDE.md
 ├── apps/
 │   ├── platform-web/        # 관리 UI: 결과 조회 → 테스트 실행 요청
-│   ├── platform-server/     # 포털 백엔드 (폴더 구조만 생성, 실행 코드 없음)
+│   ├── platform-server/     # 포털 백엔드: GitHub 연동·결과 연결
 │   ├── finance-web/         # React + TypeScript + Vite
-│   └── finance-server/      # Hono CRUD API·SQLite 저장·Swagger UI
+│   └── finance-server/      # Finance 도메인·API·DB·마이그레이션
 ├── packages/
 │   ├── ui/                   # 공용 표현 컴포넌트
 │   ├── domain/               # 공유할 가치가 있는 순수 계약/계산
@@ -76,26 +86,17 @@ devflowops/
 └── package.json
 ```
 
-이 폴더 구조에는 **현재 파일과 목표 예시가 함께 포함**되어 있다. `finance-server`는 서버 실행, 수입·지출 CRUD·DB 저장과 Swagger UI를 구성했고 `platform-server`는 폴더 구조만 있으며, 공용 패키지·실행 도구·인프라는 필요한 구현 단계에 추가한다. 특히 두 번째 데모 앱은 불필요하다. `platform-web`은 플랫폼 자체 기능이며 추가 데모 앱이 아니다. 앱별 테스트는 각 앱에서 관리하고 루트 `tests/e2e`는 필요한 앱 간 시나리오에만 사용한다. `packages/*`나 실행 가능한 `tools/*`를 워크스페이스 패키지로 도입할 때 pnpm workspace glob도 함께 추가한다.
+이 트리는 목표 구조이며 실제 파일 목록이 아니다. 공용 패키지·실행 도구·인프라는 필요한 구현 단계에 추가한다. 특히 두 번째 데모 앱은 불필요하다. `platform-web`은 플랫폼 자체 기능이며 추가 데모 앱이 아니다. 앱별 테스트는 각 앱에서 관리하고 루트 `tests/e2e`는 필요한 앱 간 시나리오에만 사용한다. `packages/*`나 실행 가능한 `tools/*`를 워크스페이스 패키지로 도입할 때 pnpm workspace glob도 함께 추가한다.
 
-백엔드도 현재 모노레포에서 별도 워크스페이스 패키지로 관리하기로 확정했다. 각 서버는 자체 `package.json`으로 서버 의존성과 작업 명령을 관리하고, 루트 pnpm/Turborepo로 전체 작업을 실행하는 구성을 목표로 한다. `apps/finance-server`에는 `src/routes`, `src/db`, `migrations`, `data`를, `apps/platform-server`에는 `src/routes`, `src/integrations/github`, `src/results`를 준비했다. Finance 서버에는 패키지·실행 구성, 수입·지출 CRUD와 Zod 기반 입력 검증·OpenAPI·Swagger UI를 추가했다. Drizzle `1.0.0-rc.5`와 node:sqlite로 SQLite에 저장하고 서버 시작 시 버전별 SQL 마이그레이션을 적용한다. 개발 중에는 `node --watch src/index.ts`, 빌드 후에는 `node dist/index.js`로 실행한다. 로컬 `127.0.0.1:3001`의 `GET /api/health`를 제공하고 Finance Vite 개발 서버가 `/api` 요청을 전달한다. 플랫폼 서버는 안내 문서와 `.gitkeep`만 있어 아직 실행 가능한 패키지가 아니다. 플랫폼의 저장 방식과 인증, 서버 컨테이너·배포 구성은 별도 설계한다.
+백엔드는 앱별 `package.json`으로 의존성과 작업 명령을 관리하고 루트 pnpm/Turborepo가 전체 작업을 조율한다. 실제 실행·API·DB 설정과 서버 내부 파일별 책임은 [Finance 서버 안내](../apps/finance-server/README.md)를 따른다.
 
 Finance의 HTTP API·비즈니스 로직·Drizzle 스키마·DB 연결·마이그레이션은 `finance-server`가 소유한다. 프론트엔드는 HTTP로 서버에 접근하고 ORM이나 DB를 직접 사용하지 않는다. `data/`는 로컬 개발용 위치이며 실제 DB 파일은 Git에서 제외한다. 플랫폼의 `results/`는 결과 수집·연결 코드를 둘 위치이며 DB나 원본 로그·Artifact를 저장하는 디렉터리가 아니다.
 
-### 현재 Finance 서버의 내부 구성
+### Finance 내부 책임
 
-- `src/index.ts`: DB를 열고 `createApp(db)`로 앱을 구성한 뒤 HTTP 서버를 시작한다. 서버 종료 시 DB 연결을 닫는다.
-- `src/app.ts`: 상태 확인, 수입·지출 라우트 등록, 공통 오류 처리와 API 문서 경로를 구성한다.
-- `src/routes/transactions.contract.ts`: Zod 입력·응답 스키마, 요청 제약과 HTTP 응답 명세를 정의한다.
-- `src/routes/transactions.ts`: Drizzle로 거래 등록·목록·단건 조회·수정·삭제를 처리한다.
-- `src/db/schema.ts`, `src/db/client.ts`, `src/db/migrations.ts`: 테이블·DB 제약조건, 연결과 버전별 SQL 적용을 담당한다.
-- `migrations/0001_transactions.sql`: 초기 거래 테이블을 생성한다. 적용은 서버 시작 시 트랜잭션으로 수행하고 SQLite `user_version`에 기록한다.
+API 계약은 요청·응답과 HTTP 제약을, Drizzle 스키마는 저장 구조와 DB 제약을 담당한다. 요청 검증과 OpenAPI 생성은 같은 API 계약을 사용하며 응답 런타임 검증 여부와 구분한다.
 
-문서 경로는 `/api/docs`, 기계가 읽는 명세는 `/api/openapi.json`이다. 요청 검증과 문서 생성에는 같은 API 스키마를 사용하지만 Drizzle의 저장 스키마와는 책임을 구분한다. 응답의 런타임 검증은 구현 전이다.
-
-Finance 화면의 `src/features/transactions`는 API 요청, 조회·변경 상태, 입력 폼과 목록 UI를 소유한다. Vite의 `/api` 프록시를 통해 서버에 접근하며 성공 응답을 받은 뒤 목록을 갱신한다. 조회 실패 시 재시도를 제공하고 변경 실패 시 입력값을 유지한다. 초기 조회는 언마운트 시 취소하고 조회 중·변경 중에는 겹치는 변경 요청을 제한한다.
-
-대시보드의 현재 월 합계와 소비 분포는 같은 조회 내역에서 계산한다. 목록은 전체 기간이며 자산·예산·목표는 샘플로 유지한다. API 응답에는 계좌·이체 정보가 없으므로 입력·필터에 추가하지 않는다. 화면부터 DB까지의 연결 코드는 구현했지만 브라우저에서 전체 흐름을 실행하는 검증은 남아 있다.
+Finance 화면의 `src/features/transactions`는 API 요청, 조회·변경 상태, 입력 폼과 목록 UI를 소유한다. 대시보드는 조회 결과에서 화면용 합계를 계산한다. 서버는 HTTP 요청 처리와 데이터 저장을 소유한다. 개발 프록시와 DB 마이그레이션 절차는 [Finance 서버 안내](../apps/finance-server/README.md)를 따른다.
 
 ## 3. 개발/빌드 플랫폼
 
@@ -126,7 +127,7 @@ AI 호출 성공 여부는 기본 PR 검사·빌드 성공의 조건과 분리�
 
 ## 5. OCI 런타임의 분리
 
-- 웹 배포 방향은 Finance와 포털을 각각의 Nginx 컨테이너로 별도 배포하는 것으로 선택했다. 하나의 공통 웹 이미지에 두 프론트엔드를 묶는 제안은 채택하지 않았다. Dockerfile·Compose 설정은 아직 없다.
+- Finance와 포털을 각각의 Nginx 컨테이너로 별도 배포한다. 배포 구성의 결정 상태는 [결정 기록](DECISIONS.md)을 따른다.
 - 상시 실행 목표: 앱별 Nginx(React 정적 배포/프록시), Node.js 백엔드. 서버 컨테이너의 통합·분리와 구체적인 서비스 구성은 미확정이다.
 - SQLite는 Finance 서버가 `node:sqlite`로 접근하는 파일이며 별도의 DB 서버 컨테이너를 만들지 않는다. 운영 DB 디렉터리는 영속 볼륨에 두고 소스·이미지와 분리한다. 볼륨 종류·경로와 일관된 백업·복원 방식은 상세 설계 전이다.
 - 컨테이너 간 필요한 API 통신은 Docker 네트워크에서 서비스 이름과 내부 포트를 사용하는 방향이다. 브라우저에서 실행되는 React 코드는 Docker 내부 서비스 이름으로 직접 접근하지 않는다. 네트워크 범위·포트·도메인·HTTPS·프록시와 접근 제어는 별도 설계한다.
@@ -160,16 +161,17 @@ GitHub 저장소의 공개 여부 자체는 OCI 인스턴스에 비밀 정보가
 
 ## 8. 플랫폼 관리 화면과 앱별 실행 구조
 
-**관리 화면의 정적 기본 뼈대와 플랫폼 서버 폴더 구조만 있으며 아래 연동 구조는 목표 설계다.** 같은 모노레포에서 플랫폼 UI·실행 도구·대상 앱을 관리한다. GitHub는 코드·리뷰와 CI/CD 실행 기반을, 관리 화면은 앱별 실행 및 품질 추적을 담당한다.
+아래 연동 구조는 목표 설계다. 같은 모노레포에서 플랫폼 UI·실행 도구·대상 앱을 관리한다. GitHub는 코드·리뷰와 CI/CD 실행 기반을, 관리 화면은 앱별 실행 및 품질 추적을 담당한다.
 
 ### 책임과 데이터 흐름
 
 | 구성 요소 | 책임 |
 |---|---|
 | `apps/platform-web` | 앱 현황, 실행 이력·상세, CI/CD·배포 후 QA 결과, 허용된 테스트 실행 요청 |
-| 플랫폼 서버 (`apps/platform-server`, 폴더 구조만 생성) | 앱 설정 검증, 실행 요청 접수, 실행 상태·결과 조회, GitHub 연동 |
+| 플랫폼 서버 (`apps/platform-server`) | 앱 설정 검증, 실행 요청 접수, 실행 상태·결과 조회, GitHub 연동 |
 | GitHub Actions / QA 실행기 | 허용된 작업 실행, 결정론적 결과와 증거 생성 |
-| `tools/quality-agent` | CLI/CI/관리 화면에서 재사용하는 수집·실행·보고, 선택적 AI 분석 |
+| 공통 QA 도구 (`tools/quality-agent` 경로 제안) | CLI/CI/관리 화면에서 재사용하는 검사 실행·증거 수집·보고, 선택적 AI 분석 연결 |
+| AI 분석 모듈 | 수집한 증거를 바탕으로 실패 원인 후보·테스트 누락·추가 확인을 제안. 검사 판정과 배포 승인을 소유하지 않음 |
 | 대상 앱 (`apps/finance-web` 등) | 기능 코드, 테스트 시나리오, 앱별 실행 설정 |
 
 1. 결과 조회: Actions 및 QA 실행 결과 → 플랫폼 API의 수집·연결 → 관리 화면. 원본 로그·Artifact는 링크로 제공한다.
@@ -178,6 +180,7 @@ GitHub 저장소의 공개 여부 자체는 OCI 인스턴스에 비밀 정보가
 
 ### 앱 추가와 모듈 경계
 
+- 관리 앱 목록은 현재 워크스페이스 범위인 `apps/*/package.json`의 이름으로 발견한다. 발견한 앱은 목록에 표시할 수 있지만 이것이 테스트 실행 허용이나 배포 등록을 뜻하지는 않는다. 개발 중에는 파일 변경을 반영하고 배포 화면은 빌드 시점 목록을 사용한다. 구체적인 표시 규칙은 [앱 자동 발견 절차](DEVELOPMENT_GUIDE.md#9-포털-관리-앱-자동-발견)를 따른다.
 - 앱 ID, workspace, 지원 검사 종류, 검증 명령 또는 workflow 식별자, 허용 환경, 배포/health check 대상과 결과 위치를 등록하는 설정을 설계한다. 정확한 파일명·스키마는 구현 시 확정한다.
 - 공통 파이프라인은 실행·수집·보고를 담당하고, 앱은 도메인별 테스트를 제공한다. 공통 UI나 결과 계약은 실제 공유가 발생할 때 `packages/`로 추출한다.
 - pnpm/Turbo 그래프와 정적 규칙으로 영향 앱을 결정한다. 같은 저장소에서도 앱별 검사·배포가 가능하도록 설계한다.

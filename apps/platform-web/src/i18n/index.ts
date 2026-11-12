@@ -15,7 +15,7 @@ function savedLanguage() {
 
 function applyLanguage(language: string) {
   document.documentElement.lang = language
-  document.title = language === 'en' ? 'Developer Portal · DevFlowOps' : '개발 포털 · DevFlowOps'
+  document.title = (language === 'en' ? en : ko).page.title
   try {
     localStorage.setItem(storageKey, language)
   } catch {
@@ -30,7 +30,7 @@ void i18next.use(initReactI18next).init({
   lng: savedLanguage(),
   fallbackLng: 'ko',
   supportedLngs: ['ko', 'en'],
-  keySeparator: false,
+  keySeparator: '.',
   nsSeparator: false,
   initAsync: false,
   interpolation: { escapeValue: false },

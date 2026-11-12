@@ -16,7 +16,8 @@
     "build": "turbo run build",
     "lint": "pnpm lint:docs && turbo run lint",
     "lint:docs": "node scripts/check-doc-language.mjs",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "test:e2e": "pnpm --filter @devflowops/finance-web test:e2e"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

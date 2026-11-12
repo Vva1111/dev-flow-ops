@@ -30,7 +30,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     })
   } catch (error) {
     if (options.signal?.aborted) throw error
-    throw new Error('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.', { cause: error })
+    throw new Error('transactions.errors.connection', { cause: error })
   }
 
   if (response.ok && response.status === 204) return undefined as T
@@ -38,19 +38,19 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const payload = await response.json().catch(() => null)
   if (!response.ok) {
     const messages: Record<string, string> = {
-      VALIDATION_ERROR: '입력값을 확인해 주세요.',
-      INVALID_REQUEST: '올바른 JSON 요청을 보내 주세요.',
-      NOT_FOUND: '거래 내역을 찾을 수 없습니다.',
+      VALIDATION_ERROR: 'transactions.errors.validation',
+      INVALID_REQUEST: 'transactions.errors.invalidRequest',
+      NOT_FOUND: 'transactions.errors.notFound',
     }
     const code = payload?.error?.code
     throw new Error(
       typeof code === 'string' && Object.hasOwn(messages, code)
         ? messages[code]
-        : '요청을 처리하지 못했습니다. 다시 시도해 주세요.',
+        : 'transactions.errors.request',
     )
   }
   if (payload === null) {
-    throw new Error('서버 응답을 확인하지 못했습니다. 다시 시도해 주세요.')
+    throw new Error('transactions.errors.response')
   }
   return payload as T
 }
@@ -58,7 +58,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 export const transactionsApi = {
   async list(signal: AbortSignal) {
     const payload = await request<{ data: Transaction[] }>('', { signal })
-    if (!Array.isArray(payload.data)) throw new Error('거래 내역을 확인하지 못했습니다.')
+    if (!Array.isArray(payload.data)) throw new Error('transactions.errors.invalidList')
     return payload.data
   },
   create: (input: TransactionInput) => request<Transaction>('', { method: 'POST', body: input }),

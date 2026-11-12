@@ -29,7 +29,7 @@ void i18next.use(initReactI18next).init({
   lng: savedLanguage(),
   fallbackLng: 'ko',
   supportedLngs: ['ko', 'en'],
-  keySeparator: false,
+  keySeparator: '.',
   nsSeparator: false,
   initAsync: false,
   interpolation: { escapeValue: false },

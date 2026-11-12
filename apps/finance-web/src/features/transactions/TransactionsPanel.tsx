@@ -11,9 +11,9 @@ export function TransactionsPanel({ data }: Props) {
   const { t, i18n } = useTranslation()
   const language = i18n.resolvedLanguage ?? 'ko'
   const filters = [
-    { value: 'all', label: t('전체') },
-    { value: 'expense', label: t('지출') },
-    { value: 'income', label: t('수입') },
+    { value: 'all', label: t('transactions.filters.all') },
+    { value: 'expense', label: t('transactions.types.expense') },
+    { value: 'income', label: t('transactions.types.income') },
   ] as const
   const [filter, setFilter] = useState<'all' | Transaction['type']>('all')
   const [formOpen, setFormOpen] = useState(false)
@@ -32,7 +32,7 @@ export function TransactionsPanel({ data }: Props) {
   async function save(input: TransactionInput) {
     if (editing) await data.update(editing.id, input)
     else await data.create(input)
-    setFeedback({ type: 'success', message: editing ? '내역을 수정했습니다.' : '내역을 등록했습니다.' })
+    setFeedback({ type: 'success', message: editing ? 'transactions.feedback.updated' : 'transactions.feedback.created' })
     if (!editing) setFilter('all')
     setFormOpen(false)
     setEditing(null)
@@ -43,47 +43,47 @@ export function TransactionsPanel({ data }: Props) {
     try {
       await data.remove(deleting.id)
       setDeleting(null)
-      setFeedback({ type: 'success', message: '내역을 삭제했습니다.' })
+      setFeedback({ type: 'success', message: 'transactions.feedback.deleted' })
     } catch (error) {
-      setFeedback({ type: 'error', message: error instanceof Error ? error.message : '내역을 삭제하지 못했습니다.' })
+      setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'transactions.errors.delete' })
     }
   }
 
   return (
     <section id="transactions" className="panel transactions-panel" aria-labelledby="transactions-title">
       <div className="section-heading">
-        <div><p className="eyebrow">ACTIVITY</p><h2 id="transactions-title">{t('수입·지출 내역')}</h2></div>
-        <button className="primary-button" type="button" disabled={controlsDisabled} onClick={() => openForm(null)}>{t('내역 등록')}</button>
+        <div><p className="eyebrow">ACTIVITY</p><h2 id="transactions-title">{t('transactions.title')}</h2></div>
+        <button className="primary-button" type="button" disabled={controlsDisabled} onClick={() => openForm(null)}>{t('transactions.actions.openCreate')}</button>
       </div>
       <div className="transaction-toolbar">
-        <div className="filter-group" role="group" aria-label={t('내역 종류')}>
+        <div className="filter-group" role="group" aria-label={t('transactions.filters.label')}>
           {filters.map((item) => (
             <button key={item.value} type="button" aria-pressed={filter === item.value} onClick={() => setFilter(item.value)}>{item.label}</button>
           ))}
         </div>
-        <button className="secondary-button" type="button" disabled={data.status === 'loading' || data.isMutating || formOpen || deleting !== null} onClick={() => { setFeedback(null); data.reload() }}>{t('새로고침')}</button>
+        <button className="secondary-button" type="button" disabled={data.status === 'loading' || data.isMutating || formOpen || deleting !== null} onClick={() => { setFeedback(null); data.reload() }}>{t('common.refresh')}</button>
       </div>
       {formOpen && <TransactionForm key={editing?.id ?? 'new'} transaction={editing} isPending={data.isMutating} onSave={save} onCancel={() => { setFormOpen(false); setEditing(null) }} />}
       {deleting && (
         <div className="delete-confirmation" role="alert" aria-busy={data.isMutating}>
-          <p><strong>{deleting.description}</strong> {t('내역을 삭제할까요? 삭제한 내역은 복구할 수 없습니다.')}</p>
+          <p><strong>{deleting.description}</strong> {t('transactions.deleteConfirmation')}</p>
           <div className="transaction-actions">
-            <button className="secondary-button" type="button" disabled={data.isMutating} onClick={() => { setDeleting(null); setFeedback(null) }}>{t('취소')}</button>
-            <button className="danger-button" type="button" disabled={data.isMutating} onClick={confirmDelete}>{data.isMutating ? t('삭제 중…') : t('삭제 확인')}</button>
+            <button className="secondary-button" type="button" disabled={data.isMutating} onClick={() => { setDeleting(null); setFeedback(null) }}>{t('common.cancel')}</button>
+            <button className="danger-button" type="button" disabled={data.isMutating} onClick={confirmDelete}>{data.isMutating ? t('transactions.actions.deleting') : t('transactions.actions.confirmDelete')}</button>
           </div>
         </div>
       )}
       {feedback && <p className={feedback.type === 'error' ? 'transaction-error' : 'transaction-success'} role={feedback.type === 'error' ? 'alert' : 'status'}>{t(feedback.message)}</p>}
-      {data.status === 'loading' && <p className="transaction-empty" role="status">{t('내역을 불러오는 중입니다.')}</p>}
-      {data.error && <p className="transaction-error" role="alert">{t(data.error)} {t('새로고침으로 다시 불러올 수 있습니다.')}</p>}
+      {data.status === 'loading' && <p className="transaction-empty" role="status">{t('transactions.loading')}</p>}
+      {data.error && <p className="transaction-error" role="alert">{t(data.error)} {t('transactions.retryHint')}</p>}
       {data.status === 'ready' && visible.length === 0 && (
-        <p className="transaction-empty" role="status">{data.transactions.length === 0 ? t('등록된 내역이 없습니다. 첫 수입이나 지출을 기록해 보세요.') : t('선택한 종류의 내역이 없습니다.')}</p>
+        <p className="transaction-empty" role="status">{data.transactions.length === 0 ? t('transactions.empty') : t('transactions.filteredEmpty')}</p>
       )}
       {data.status === 'ready' && visible.length > 0 && (
         <div className="table-scroll">
           <table>
-            <caption className="sr-only">{t('저장된 수입·지출 내역')}</caption>
-            <thead><tr><th scope="col">{t('내역')}</th><th scope="col">{t('날짜')}</th><th scope="col" className="amount-cell">{t('금액')}</th><th scope="col">{t('관리')}</th></tr></thead>
+            <caption className="sr-only">{t('transactions.table.caption')}</caption>
+            <thead><tr><th scope="col">{t('transactions.fields.description')}</th><th scope="col">{t('transactions.fields.date')}</th><th scope="col" className="amount-cell">{t('transactions.fields.amount')}</th><th scope="col">{t('common.actions')}</th></tr></thead>
             <tbody>
               {visible.map((transaction) => (
                 <tr key={transaction.id}>
@@ -94,11 +94,11 @@ export function TransactionsPanel({ data }: Props) {
                   <td><time dateTime={transaction.date}>{formatDate(transaction.date, language)}</time></td>
                   <td className={`amount-cell ${transaction.type === 'income' ? 'income-text' : ''}`}>
                     <strong>{transaction.type === 'income' ? '+' : '−'}{formatWon(transaction.amount, language)}</strong>
-                    <small>{transaction.type === 'income' ? t('수입') : t('지출')}</small>
+                    <small>{transaction.type === 'income' ? t('transactions.types.income') : t('transactions.types.expense')}</small>
                   </td>
                   <td><div className="row-actions">
-                    <button className="secondary-button" type="button" aria-label={t('{{name}} 수정', { name: transaction.description })} disabled={controlsDisabled} onClick={() => openForm(transaction)}>{t('수정')}</button>
-                    <button className="danger-button" type="button" aria-label={t('{{name}} 삭제', { name: transaction.description })} disabled={controlsDisabled} onClick={() => { setDeleting(transaction); setFeedback(null) }}>{t('삭제')}</button>
+                    <button className="secondary-button" type="button" aria-label={t('transactions.actions.editLabel', { name: transaction.description })} disabled={controlsDisabled} onClick={() => openForm(transaction)}>{t('common.edit')}</button>
+                    <button className="danger-button" type="button" aria-label={t('transactions.actions.deleteLabel', { name: transaction.description })} disabled={controlsDisabled} onClick={() => { setDeleting(transaction); setFeedback(null) }}>{t('common.delete')}</button>
                   </div></td>
                 </tr>
               ))}
@@ -106,7 +106,7 @@ export function TransactionsPanel({ data }: Props) {
           </table>
         </div>
       )}
-      <p className="table-note">{data.status === 'ready' ? t('전체 기간의 내역 {{count}}건', { count: data.transactions.length }) : t('전체 기간의 내역')} {data.status === 'error' ? t('조회 실패') : data.status === 'loading' ? t('조회 중') : ''} · {t('날짜순으로 표시합니다. 이체·계좌 관리는 아직 지원하지 않습니다.')}</p>
+      <p className="table-note">{data.status === 'ready' ? t('transactions.totalCount', { count: data.transactions.length }) : t('transactions.allDates')} {data.status === 'error' ? t('transactions.status.failed') : data.status === 'loading' ? t('transactions.status.loading') : ''} · {t('transactions.table.note')}</p>
     </section>
   )
 }

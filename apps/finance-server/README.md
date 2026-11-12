@@ -1,6 +1,6 @@
 # Finance Server
 
-Finance 앱의 HTTP API, 비즈니스 로직, DB 접근과 마이그레이션을 관리하는 백엔드 서버다. Hono, Zod와 Drizzle ORM, Node.js 내장 `node:sqlite`, SQLite로 수입·지출 API를 구성했다. Drizzle은 사용자 승인에 따라 `1.0.0-rc.5`로 고정했다.
+Finance 앱의 HTTP API, 비즈니스 로직, DB 접근과 마이그레이션을 관리하는 백엔드 서버다. Hono, Zod와 Drizzle ORM, Node.js 내장 `node:sqlite`, SQLite로 수입·지출 API를 구성했다. 버전 선택은 [결정 기록](../../docs/DECISIONS.md), 실제 의존성은 이 패키지의 `package.json`과 루트 lockfile을 따른다.
 
 ## 실행
 
@@ -64,13 +64,13 @@ pnpm --filter @devflowops/finance-server typecheck
 
 ## DB와 마이그레이션
 
-기본 DB는 `apps/finance-server/data/finance.db`다. 현재 작업 디렉터리와 관계없이 서버 패키지를 기준으로 경로를 정한다. `FINANCE_DB_PATH` 환경변수로 별도 경로를 지정할 수 있으며, 상대 경로는 서버 패키지 기준이다. `:memory:`도 지원한다. DB 파일은 Git에서 제외한다.
+기본 DB는 `apps/finance-server/data/finance.db`다. 현재 작업 디렉터리와 관계없이 서버 패키지를 기준으로 경로를 정한다. `FINANCE_DB_PATH` 환경변수로 별도 경로를 지정할 수 있으며, 상대 경로는 서버 패키지 기준이다. `:memory:`도 지원한다. DB 파일은 Git에서 제외한다. 잠금 대기는 5초이며 저널 모드는 별도로 변경하지 않는다. 초기 DB에 샘플 내역을 자동으로 넣지 않으며 빈 DB의 목록은 비어 있다.
 
 서버 시작 시 버전별 SQL 마이그레이션을 트랜잭션 안에서 적용하고 SQLite의 `user_version`으로 적용 상태를 관리한다. 현재 버전은 1이며 재시작 시 이미 적용한 SQL은 건너뛴다. 실패하면 롤백하고 서버 시작을 중단한다. DB 버전이 서버의 지원 버전보다 높으면 서버 시작을 중단한다. Drizzle Kit은 도입하지 않았으며 SQL 파일과 Drizzle 테이블 정의를 함께 관리한다.
 
-수입·지출 API는 DB에 영속 저장하며 Finance 화면의 입력·목록·수정·삭제와 연결했다. 이번 달 수입·지출과 소비 분포는 조회한 내역에서 계산한다. 자산·부채·예산·목표는 샘플로 유지한다. 공개 운영 인증과 배포는 아직 구현하지 않았으며 서버는 로컬 주소에서 실행한다.
+화면 연결과 후속 기능의 구현 상태는 [개발 진행 현황](../../docs/DEVELOPMENT_STATUS.md)을 따른다. 공개 운영의 접근 제한과 배포 구성은 [결정 기록](../../docs/DECISIONS.md#미확정--추천)을 확인한다.
 
-## 구조와 남은 구현
+## 내부 구조
 
 ```text
 finance-server/
@@ -91,15 +91,13 @@ finance-server/
 └── data/                         # 로컬 DB 위치, 실제 DB는 Git 제외
 ```
 
-카테고리 관리, 날짜 필터와 통계 API는 구현 전이다. 화면과 API 연결은 구현했으며 브라우저에서 기본 사용자 흐름을 확인하는 검증은 남아 있다.
-
 `createApp(db)`는 전달받은 DB로 라우트를 구성하며, 모듈을 가져오는 것만으로 DB 파일을 만들거나 포트를 열지 않는다. `index.ts`가 DB를 열고 앱을 생성한 뒤 HTTP 서버를 시작하며, 종료 시 DB도 닫는다. 빌드 결과를 별도 위치에 배치할 때에는 `dist/`뿐 아니라 서버 패키지의 `migrations/` SQL 파일도 함께 제공해야 한다.
 
 API 응답 스키마는 명세 생성과 타입 계약에 사용하며 실제 응답의 런타임 검증은 별도로 구현하지 않았다. 현재 실행한 검사와 남은 검증은 [개발 가이드](../../docs/DEVELOPMENT_GUIDE.md#6-현재-검증-상태)를 따른다.
 
 - 운영 DB는 소스 코드나 이미지에 포함하지 않고 별도 영속 볼륨에 보관한다.
 - 테스트는 운영 DB와 분리된 DB·환경을 사용한다. 테스트 DB의 구체적인 경로는 구현 시 정한다.
-- 마이그레이션은 서버 시작 시 SQL 파일을 적용한다. 서버 컨테이너·배포 구성은 미확정이며 Finance와 포털 프론트엔드는 각각의 Nginx로 별도 배포하는 방향을 선택했다.
+- 서버 컨테이너와 네트워크의 책임 경계는 [아키텍처](../../docs/ARCHITECTURE.md#5-oci-런타임의-분리)를 따른다.
 - Finance의 API·DB 구현은 이 앱이 소유한다. 프론트엔드는 HTTP로 API를 호출하며 DB에 직접 접근하지 않는다.
 
 선택 이유는 [기술 선택 문서](../../docs/TECH_STACK.md), 관리 구조는 [아키텍처](../../docs/ARCHITECTURE.md)를 따른다.

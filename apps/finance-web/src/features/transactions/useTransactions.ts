@@ -23,7 +23,7 @@ export function useTransactions() {
       setError(null)
     }).catch((error: unknown) => {
       if (controller.signal.aborted) return
-      setError(error instanceof Error ? error.message : '거래 내역을 불러오지 못했습니다.')
+      setError(error instanceof Error ? error.message : 'transactions.errors.load')
       setStatus('error')
     })
 
@@ -42,7 +42,7 @@ export function useTransactions() {
     apply: (result: T, current: Transaction[]) => Transaction[],
   ) {
     if (mutationLock.current || status !== 'ready') {
-      throw new Error('진행 중인 요청이 끝난 뒤 다시 시도해 주세요.')
+      throw new Error('transactions.errors.busy')
     }
     mutationLock.current = true
     setIsMutating(true)

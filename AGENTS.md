@@ -4,6 +4,8 @@
 
 DevFlowOps는 **프론트엔드 개발·검증·배포·품질 검증 전체 흐름을 자동화하는 개발 플랫폼**이다. AI 기반 분석은 그중 하나의 도구이자 기능이다. 이 프로젝트를 AI 에이전트 단독 프로젝트, 단순 금융 앱, 단순 CI/CD 시연 프로젝트로 재정의하지 말 것.
 
+작업 범위와 우선순위는 [개발 목표 유지 기준](docs/PROJECT_CONTEXT.md#개발-목표-유지-기준)에 맞춰 판단하고, 파이프라인과 책임 경계는 [아키텍처](docs/ARCHITECTURE.md#1-시스템-개요)를 따른다. 기능 추가·구조 변경 전 이 기준과의 연결을 확인한다. 목표나 우선순위가 달라지는 작업은 기존 대화의 합의 여부를 확인하고, 합의가 없다면 사용자와 먼저 합의한 뒤 결정 기록을 갱신한다.
+
 GitHub Description (확정 문구):
 > An AI-assisted frontend development platform that automates testing, CI/CD, deployment, and quality assurance.
 
@@ -11,34 +13,50 @@ GitHub Description (확정 문구):
 
 새로운 작업을 시작하기 전, 특히 구조 변경/기능 추가 시 다음을 우선 읽는다.
 
-- `docs/PROJECT_CONTEXT.md` — 목표, 확정 스택, 제약, 범위
+- `docs/PROJECT_CONTEXT.md` — 배경, 목표, 도메인과 범위
 - `docs/DECISIONS.md` — 확정 / 추천 / 미검증의 구분
 - `docs/TECH_STACK.md` — 기술 선택 이유와 서버 관리·배포 방향
 - `docs/ARCHITECTURE.md` — 시스템 및 폴더 구조, CI/CD
 - `docs/AI_QUALITY_AGENT.md` — AI Agent 기능과 안전한 실행 계약
 - `docs/ROADMAP.md` — 우선순위 및 각 단계의 완료 조건
 - `docs/DEVELOPMENT_GUIDE.md` — 크로스 플랫폼 개발 수칙
-- `docs/DEVELOPMENT_STATUS.md` — 개발자가 빠르게 읽는 현재 구현·검증 상태와 다음 작업
+- `docs/DEVELOPMENT_STATUS.md` — Finance와 포털의 현재 단계·구현·미구현 사항
 
 대화에 관련 결정 내용이 없다면 문서에 따른다. 문서와 구현이 다를 경우 실제 파일을 확인하고 차이를 사용자에게 설명한다. 문서가 구현의 증거는 아니다.
 
 기능·구조가 달라지면 `docs/DEVELOPMENT_STATUS.md`도 갱신한다. 이 문서는 Finance와 포털을 구분하고, 각각 단계·목적·구현 사항·미구현 사항만 간단한 Markdown 소제목과 한 단계 목록으로 정리한다. 확인한 범위·다음 작업·직접 확인하기 항목은 넣지 않는다. 표·중첩 목록·과도한 강조는 피한다.
 
+구현 사항은 기능과 실행 구조를 중심으로 기록한다. 배치·글자 크기·여백·색상·footer 등 퍼블리싱 변경은 구현 사항에 추가하지 않는다. 관련 검증 결과는 개발 가이드의 검증 기록에 남긴다.
+
+## 문서별 기준과 갱신 규칙
+
+| 정보 | 기준 문서 |
+|---|---|
+| 에이전트 작업 규칙과 승인 경계 | 이 문서 `AGENTS.md` |
+| 프로젝트 배경·목표·도메인·범위 | [PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md) |
+| 현재 결정 상태와 날짜별 결정 이력 | [DECISIONS.md](docs/DECISIONS.md) |
+| 기술 선택의 상세 근거와 제약 | [TECH_STACK.md](docs/TECH_STACK.md) |
+| 구성 요소의 책임·데이터 흐름·실행 경계 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| AI 분석 입력·출력·실행·평가 계약 | [AI_QUALITY_AGENT.md](docs/AI_QUALITY_AGENT.md) |
+| 구현 순서와 단계별 완료 기준 | [ROADMAP.md](docs/ROADMAP.md) |
+| 현재 단계·구현·미구현 사항 | [DEVELOPMENT_STATUS.md](docs/DEVELOPMENT_STATUS.md) |
+| 개발 환경·작업 절차·실행한 검사와 미확인 항목 | [DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md) |
+| Finance 서버 실행·API·DB·마이그레이션 절차 | [Finance 서버 안내](apps/finance-server/README.md) |
+
+- 정보가 바뀌면 해당 기준 문서를 갱신한다. 다른 문서에는 같은 목록이나 상태를 복제하지 않고 기준 문서를 연결한다. README는 소개와 시작 경로를 제공한다.
+- 결정은 `DECISIONS.md`의 현재 상태를 먼저 갱신하고 날짜별 이력을 추가한다. 과거 이력은 당시 기록으로 보존하며 현재 상태로 해석하지 않는다. 선택 이유가 바뀌면 `TECH_STACK.md`, 책임이나 흐름이 바뀌면 `ARCHITECTURE.md`도 해당 내용만 갱신한다.
+- 구현 상태가 바뀌면 `DEVELOPMENT_STATUS.md`의 해당 앱 단계·구현·미구현 사항을 갱신한다. 구현 목록을 README나 설계 문서에 다시 작성하지 않는다.
+- 실제 검사를 수행하면 `DEVELOPMENT_GUIDE.md`의 검증 기록에 실행일·명령·결과·미확인 범위를 남긴다. 이전 검증 결과를 이번 작업에서 다시 확인한 결과처럼 기록하지 않는다.
+- `ROADMAP.md`는 구현 순서와 완료 기준만 관리한다. 진행 체크나 현재 구현 상태는 복제하지 않는다.
+- 작업을 마치기 전에 변경한 정보의 기준 문서가 갱신되었는지, 다른 문서에 중복 목록이나 오래된 상태 설명이 남았는지 확인한다. 문서 정리만으로 앱 구현이 달라지지 않았다면 개발 진행 현황을 변경하지 않는다.
+- 실행 버전·명령·의존성의 기준은 실제 설정 파일과 lockfile이다. 기준 문서도 구현이나 검증의 증거를 대신하지 않는다. 문서가 충돌하면 기준 문서와 실제 파일을 비교해 차이를 설명하고 정리한다.
+
 ## 결정·제약
 
-- **확정**: DevFlowOps 이름 및 목적, 검증용 Finance App, React + TypeScript + Vite, pnpm Workspaces, Turborepo, SQLite, Vitest, Playwright, GitHub, GitHub Actions, Docker/Compose, GHCR.
-- **추가된 목표 범위**: 단일 모노레포에서 플랫폼 관리 화면과 검증 대상 앱을 함께 개발한다. 관리 화면은 앱별 테스트 실행 요청과 CI/CD·배포 후 QA 결과 추적을 제공한다. GitHub 기반 실행을 활용하며 조회부터 도입한다. 현재 관리 화면의 기본 뼈대와 `apps/platform-server` 폴더 구조만 있으며 실제 연동은 미구현이다. 플랫폼 인증·저장 방식은 미확정이다.
-- **선택된 인프라 목표**: OCI Always Free Ampere A1. 실제 할당, 자원, 적합성은 검증 전이다.
-- **선택된 AI 방향**: Codex CLI와 사용자의 ChatGPT 구독 로그인으로 **별도의 유료 API 종량제 사용을 피하는 방향**. OCI 서버에서 무인 실행은 아직 검증하지 않았다.
-- **확정된 API 프레임워크**: Hono. Finance 서버에 상태 확인과 수입·지출 CRUD API, 스키마 기반 OpenAPI·Swagger UI를 구성했다. 플랫폼 서버 도입은 구현 전이다. 선택 이유는 `docs/TECH_STACK.md`를 따른다.
-- **확정된 ORM**: Drizzle ORM. 사용자 승인으로 `1.0.0-rc.5`를 고정해 Finance의 node:sqlite와 연결했다. 서버 시작 시 버전별 SQL 마이그레이션을 적용하며 Drizzle Kit은 사용하지 않는다.
-- **확정된 백엔드 런타임**: Node.js. 저장소의 고정 버전을 사용한다.
-- **확정된 SQLite 드라이버**: Node.js 내장 `node:sqlite`. 외부 드라이버 의존성을 줄이려는 선택이다. 현재 고정한 Node.js 24.22.2에서는 RC 상태이며 Drizzle RC 연결과 현재 Linux 환경의 API 저장·재시작을 확인했으며 Windows·ARM64 실행은 검증 전이다.
-- **확정된 서버 관리 방식**: 백엔드도 현재 모노레포 안에서 별도 `package.json`을 가진 워크스페이스 패키지로 관리한다. `apps/finance-server`는 실행 가능한 패키지와 상태 확인 API를 구성했고, `apps/platform-server`는 폴더 구조만 있으며 `package.json`과 실행 코드는 없다. Finance 서버는 HTTP API·비즈니스 로직·DB 접근·마이그레이션을 소유하고 플랫폼 서버는 GitHub 연동·실행 결과 연결을 담당한다. 플랫폼 저장 방식은 미확정이다.
-- **선택한 웹 배포 방향**: Finance와 포털 프론트엔드는 각각의 Nginx 컨테이너로 별도 배포한다. 컨테이너 간 API 통신은 Docker 네트워크를 활용하는 방향이며 네트워크 범위·포트·도메인·HTTPS와 서버 컨테이너 구성은 상세 설계 전이다. Docker 설정은 아직 없다.
-- **추천/미확정**: AI 분석 보고서 게시 경로, OCI 인증 운영 방법.
-- **금지할 가정**: ChatGPT Pro 인증이 OCI에서 영구적·무제한·무중단 자동 실행된다는 주장, OCI 무료 인스턴스가 이미 확보되었다는 주장, AI 분석이 정확하다는 주장.
-- **비용 원칙**: 모델 API Key 과금이 필요한 구성을 사용자 승인 없이 도입하지 않는다. AI 기능이 불가능해도 결정론적 CI/CD와 테스트는 정상 동작해야 한다.
+기술·인프라·AI 실행 방향의 확정 여부와 남은 검증은 [결정 기록](docs/DECISIONS.md)을 따른다. 구현 여부는 [개발 진행 현황](docs/DEVELOPMENT_STATUS.md), 실행한 검사는 [검증 기록](docs/DEVELOPMENT_GUIDE.md#6-현재-검증-상태)을 확인한다.
+
+- ChatGPT Pro 인증이 OCI에서 영구적·무제한·무중단 자동 실행된다고 가정하지 않는다. OCI 무료 인스턴스 확보와 AI 분석의 정확성도 증거 없이 주장하지 않는다.
+- 모델 API Key 과금이 필요한 구성을 사용자 승인 없이 도입하지 않는다. AI 기능이 불가능해도 결정론적 CI/CD와 테스트는 정상 동작해야 한다.
 
 ## 구현 원칙
 
@@ -57,11 +75,7 @@ GitHub Description (확정 문구):
 
 ## 권장 작업 순서
 
-- **초기**: repository bootstrap → Finance MVP → Vitest/Playwright → GitHub Actions → GHCR/OCI 배포 → post-deploy QA → AI 분석.
-- QA 수집·결과 계약을 마련한 뒤 관리 화면의 결과 조회 → 제한된 테스트 실행 → 앱 추가 설정으로 확장한다. AI 분석 완료는 관리 화면의 선행 조건이 아니다.
-- 단, OCI A1 확보와 Codex CLI 원격 인증·ARM64 실행 PoC는 초기에 병행한다.
-- CI 실패 분석(배포 전)과 배포 후 품질 분석은 서로 다른 트리거를 사용하되 Agent의 수집·분석·리포팅 기능을 재사용한다.
-- 변경 영향도에 따른 테스트 선택은 먼저 pnpm/Turbo 의존성 그래프와 정적 규칙으로 수행한다. AI는 테스트 누락과 위험 시나리오 제안을 보완한다.
+구현 순서와 완료 기준은 [로드맵](docs/ROADMAP.md)을 따른다. CI 실패 분석과 배포 후 품질 분석의 트리거·공통 실행 계약은 [AI 분석 계약](docs/AI_QUALITY_AGENT.md), 변경 영향에 따른 테스트 선택은 [아키텍처](docs/ARCHITECTURE.md#3-개발빌드-플랫폼)를 따른다.
 
 ## 언어 규칙
 
