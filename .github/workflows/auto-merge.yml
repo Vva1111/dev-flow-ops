@@ -1,0 +1,46 @@
+name: Auto merge
+
+on:
+  workflow_run:
+    workflows: [PR CI]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # PR 코드와 Artifact를 가져오거나 실행하지 않는다.
+      - name: 검사한 최신 PR 자동 병합
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          run=$(gh api "repos/$GH_REPO/actions/runs/$RUN_ID")
+          sha=$(jq -r '.head_sha' <<< "$run")
+          while read -r number; do
+            pr=$(gh api "repos/$GH_REPO/pulls/$number")
+            if ! jq -e --arg sha "$sha" --arg repo "$GH_REPO" '
+              .state == "open" and .draft == false and
+              .base.ref == "main" and .head.sha == $sha and
+              .head.repo.full_name == $repo and
+              (.author_association == "OWNER" or
+               .author_association == "MEMBER" or
+               .author_association == "COLLABORATOR")
+            ' <<< "$pr" > /dev/null; then
+              echo "PR #$number: 병합 조건에 해당하지 않아 건너뜁니다."
+              continue
+            fi
+            gh pr merge "$number" --squash --auto --match-head-commit "$sha"
+          done < <(jq -r '.pull_requests[].number' <<< "$run")

@@ -115,6 +115,12 @@ Finance 화면의 `src/features/transactions`는 API 요청, 조회·변경 상�
 - PR 검사 결과 및 실패 로그·테스트 artifacts 생성.
 - 신뢰하지 않는 PR 코드를 OCI의 Codex 구독 인증 정보가 있는 환경에서 실행하지 않는다.
 
+### PR 자동 병합(`auto-merge.yml`)
+
+- PR CI 완료 이벤트에서 성공한 같은 저장소 PR만 처리한다. 최신 커밋·main 대상·열린 상태·Draft 여부·협업자 관계를 다시 확인한다.
+- PR CI에는 읽기 권한만 부여한다. 쓰기 권한은 기본 브랜치의 병합 워크플로에만 부여하며 checkout·PR 코드·Artifact 실행 없이 GitHub API와 CLI로 병합한다.
+- 저장소의 main 필수 검사와 자동 병합 허용 설정을 따르며 배포 실행과 구분한다. 설정 및 운영 절차는 [개발 가이드](DEVELOPMENT_GUIDE.md#11-pr-ci와-자동-병합)를 따른다.
+
 ### 릴리스 및 배포(`deploy.yml`)
 
 - `main`의 검증된 커밋에만 배포 실행.
