@@ -267,6 +267,26 @@ Finance 브라우저 검증의 설치·실행과 격리 방식은 [Finance E2E �
 - `actionlint 1.7.7`로 두 워크플로의 문법·표현식을 검사해 통과했다. 실행 파일은 OS 임시 경로에 내려받았고 프로젝트 의존성은 추가하지 않았다. `git diff --check`도 통과했다.
 - GitHub 호스팅 runner의 실제 CI, main 보호 규칙과 자동 병합 설정 적용, CI 실패 시 병합 차단, Draft 전환과 최신 커밋 비교의 실제 GitHub 동작은 미검증이다. 로컬에는 GitHub CLI와 연결된 GitHub 플러그인이 없어 저장소 설정을 적용하지 않았다. Windows·ARM64·컨테이너·배포도 이번에 검증하지 않았다.
 
+### 2026-11-14 Compose 배포 골격 확인
+
+- `deploy/compose.yaml`과 안내 문서를 추가했다. Python PyYAML로 YAML 파싱과 3개 서비스, DB 절대 경로와 API 호스트 포트 비공개 구성을 확인했다.
+- `pnpm lint:docs`가 Markdown 14개 파일을 검사해 통과했고 `git diff --check`도 통과했다.
+- 현재 환경에 Docker 실행 파일이 없어 `docker compose config`, 이미지 빌드와 컨테이너 기동은 검증하지 못했다. 서버 수신 주소와 웹 프록시 연결도 후속 작업이며 이번 변경은 실제 배포 완료를 뜻하지 않는다.
+- 앱 코드는 변경하지 않아 앱 테스트·빌드·E2E는 재실행하지 않았다. OCI의 실행 환경과 볼륨 권한·ARM64 호환성은 이번 작업에서 검증하지 않았다.
+
+### 2026-11-14 GitHub PR 병합과 CI 결과 확인
+
+- 이전 점검에서 공개 GitHub API로 [PR 1](https://github.com/Vva1111/dev-flow-ops/pull/1)의 병합 완료와 커밋 `b437c1c`를 확인했다. [PR CI](https://github.com/Vva1111/dev-flow-ops/actions/runs/43578414736)와 [main push CI](https://github.com/Vva1111/dev-flow-ops/actions/runs/43578598782) 모두 quality·Finance E2E 작업이 success였다. 이번 문서 작업에서 원격 실행을 다시 수행한 결과는 아니다.
+- main push CI에 대한 [Auto merge 실행](https://github.com/Vva1111/dev-flow-ops/actions/runs/43578704035)은 skipped였다. PR 이벤트만 병합하도록 작성된 조건에 따른 결과이며 후속 PR의 자동 병합 성공을 입증하지 않는다.
+- 당시 `git fetch --prune origin`과 `git ls-remote`로 원격 작업 브랜치 삭제와 main 커밋을 확인했다. 로컬도 main을 fast-forward하고 병합된 작업 브랜치를 삭제해 동기화했다. 현재 Compose 작업은 별도 `deploy/compose` 브랜치에서 진행한다.
+- main 보호 규칙·자동 병합 허용 설정, 실패 시 병합 차단과 실제 자동 병합은 직접 확인하지 못했다.
+
+### 2026-11-14 진행 기록과 배포 준비 문서 갱신
+
+- PR CI의 실제 통과와 자동 병합 미검증을 구분하고 Compose 골격·named volume 유지 결정·OCI 사용자 확인 범위·SSH 정보 등록 위치와 후속 작업 순서를 각 기준 문서에 반영했다.
+- `pnpm lint:docs`는 Markdown 14개 파일을 검사해 통과했고 `git diff --check`도 통과했다. 앱 코드·Compose·CI 실행 설정은 이번 문서 갱신에서 변경하지 않았다.
+- 앱 검사·E2E·GitHub CI·OCI 접속은 재실행하지 않았다. 기존 확인 기록은 이전 점검 결과로 남겼으며 새로운 검증 결과로 취급하지 않는다.
+
 ## 7. 화면 다국어 작업
 
 - Finance와 포털은 각각 `src/i18n/index.ts`에서 i18next를 초기화하고 `src/main.tsx`에서 화면 렌더링 전에 불러온다. 번역 JSON은 앱별 `src/i18n/locales/ko.json`, `en.json`에서 관리하며 네트워크 요청 없이 번들에 포함한다.
@@ -359,3 +379,25 @@ pnpm --filter @devflowops/finance-web test
 - 필수 검사 이름은 `Lint, types, unit tests and build`와 `Finance E2E`다. 먼저 PR CI를 한 번 실행한 뒤 GitHub Actions를 출처로 지정한다. 이 설정 전에는 CI 검사만으로 main 직접 push가 차단되지 않는다.
 - 병합 작업에는 contents와 pull-requests 쓰기 권한이 필요하지만 PR 코드나 Artifact를 실행하지 않는다. 추가 개인 토큰은 사용하지 않는다. 기본 GITHUB_TOKEN으로 병합한 변경은 push 워크플로를 다시 유발하지 않을 수 있으므로 향후 배포 연결 시 트리거를 별도 검토한다.
 - 실제 CI 성공·실패 차단·Draft 해제·추가 커밋·자동 병합 검증은 GitHub에서 실행 후 기록한다. 참고: [Playwright CI](https://playwright.dev/docs/ci), [GitHub 자동 병합](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/automatically-merging-a-pull-request).
+
+## 12. OCI SSH 배포 준비
+
+OCI는 GHCR 이미지를 받아 Compose로 실행하는 배포 대상으로 준비한다. 현재 배포 워크플로는 없으며 SSH 방식은 준비 안내 단계다. OCI에 self-hosted runner를 등록하거나 PR CI 실행 위치를 바꾸지 않았다.
+
+### 접속 정보 등록
+
+- GitHub 저장소의 Settings → Secrets and variables → Actions에서 서버 주소 `OCI_HOST`, 계정 `OCI_USER`, 포트 `OCI_SSH_PORT`를 Variables에 등록한다. SSH 기본 포트는 22다.
+- 배포 전용 개인키 전체 내용은 `OCI_SSH_PRIVATE_KEY`, 신뢰할 수 있는 경로로 확인한 서버 호스트 키의 known_hosts 항목은 `OCI_SSH_KNOWN_HOSTS` Secret에 등록한다. 호스트 키 검증을 생략하지 않는다.
+- 키 쌍은 로컬 PC에서 생성할 수 있다. 공개키를 OCI 접속 계정의 `~/.ssh/authorized_keys`에 추가하고 기존 접속 키는 유지한다. 개인키는 Git·이미지·문서·대화에 포함하지 않는다. 키 발급이나 등록을 이번 작업에서 수행한 것은 아니다.
+- OCI 네트워크 규칙과 서버 방화벽에서 실제 runner의 SSH 접속 경로를 허용해야 한다. 배포 계정의 Docker 실행 권한과 배포 디렉터리 권한도 확인한다. Docker 권한은 호스트에 큰 권한을 주므로 필요한 계정에만 부여한다.
+- GHCR 이미지가 비공개라면 별도 pull 인증을 구성한다. 공개 이미지는 익명 pull이 가능하다. 토큰 도입과 보관 방식은 실제 배포 구현 시 결정한다.
+
+### 이어서 진행할 순서
+
+1. 배포용 키와 GitHub 접속 정보 등록 여부를 확인하고 SSH 접속을 검증한다.
+2. Dockerfile·Nginx의 SPA 및 API 프록시·API 수신 주소를 구성하고 Compose 기동과 DB 영속성을 확인한다.
+3. GitHub에서 이미지 빌드·GHCR 업로드와 검증된 main 커밋의 OCI 배포를 연결한다. 자동 병합의 GITHUB_TOKEN 이벤트 제약을 고려해 배포 트리거를 설계한다.
+4. 백업·복원·배포 전 마이그레이션 보호, HTTPS·접근 제한과 배포 후 읽기 전용 Smoke Test를 연결한다.
+5. QA 결과 수집과 포털 조회를 연결한 뒤 AI 보조 분석을 확장한다. 단계별 완료 기준은 [로드맵](ROADMAP.md)을 따른다.
+
+OCI 기본 환경 확인은 사용자 보고이며, 배포용 SSH 키 생성·GitHub 정보 등록·Docker 설치·GHCR 인증·실제 접속 성공은 에이전트가 확인하지 않았다. 실제 실행 조건과 Compose 명령은 [배포 안내](../deploy/README.md)를 따른다.

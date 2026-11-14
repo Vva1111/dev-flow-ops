@@ -135,7 +135,7 @@ AI 호출 성공 여부는 기본 PR 검사·빌드 성공의 조건과 분리�
 
 - Finance와 포털을 각각의 Nginx 컨테이너로 별도 배포한다. 배포 구성의 결정 상태는 [결정 기록](DECISIONS.md)을 따른다.
 - 상시 실행 목표: 앱별 Nginx(React 정적 배포/프록시), Node.js 백엔드. 서버 컨테이너의 통합·분리와 구체적인 서비스 구성은 미확정이다.
-- SQLite는 Finance 서버가 `node:sqlite`로 접근하는 파일이며 별도의 DB 서버 컨테이너를 만들지 않는다. 운영 DB 디렉터리는 영속 볼륨에 두고 소스·이미지와 분리한다. 볼륨 종류·경로와 일관된 백업·복원 방식은 상세 설계 전이다.
+- SQLite는 Finance 서버가 `node:sqlite`로 접근하는 파일이며 별도의 DB 서버 컨테이너를 만들지 않는다. 현재 Compose 초안은 named volume을 `/data`에 연결하고 `FINANCE_DB_PATH=/data/finance.db`를 사용한다. 소스·이미지와 분리해 보관하며 백업·복원과 배포 시 마이그레이션 보호 절차는 후속 설계한다. 구체적인 실행 전제는 [배포 안내](../deploy/README.md)를 따른다.
 - 컨테이너 간 필요한 API 통신은 Docker 네트워크에서 서비스 이름과 내부 포트를 사용하는 방향이다. 브라우저에서 실행되는 React 코드는 Docker 내부 서비스 이름으로 직접 접근하지 않는다. 네트워크 범위·포트·도메인·HTTPS·프록시와 접근 제어는 별도 설계한다.
 - Finance와 플랫폼 서버 간 직접 통신은 실제 필요한 기능에 한해 추가한다. 네트워크 연결만을 위해 두 서버가 서로 의존하도록 만들지 않는다.
 - 필요 시 실행: Playwright test runner / Quality Agent / Codex CLI.

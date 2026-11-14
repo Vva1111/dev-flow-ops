@@ -1,0 +1,41 @@
+name: devflowops
+
+# 배포 골격이다. 이미지 빌드와 웹 프록시·API 수신 주소 연결은 후속 작업이다.
+services:
+  finance-web:
+    image: ${FINANCE_WEB_IMAGE:?Finance 웹 이미지의 커밋 태그 또는 digest를 지정하세요}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - finance-server
+    networks:
+      - finance
+
+  finance-server:
+    image: ${FINANCE_SERVER_IMAGE:?Finance 서버 이미지의 커밋 태그 또는 digest를 지정하세요}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      FINANCE_DB_PATH: /data/finance.db
+    expose:
+      - "3001"
+    volumes:
+      - finance-data:/data
+    networks:
+      - finance
+
+  platform-web:
+    image: ${PLATFORM_WEB_IMAGE:?포털 웹 이미지의 커밋 태그 또는 digest를 지정하세요}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:80"
+    networks:
+      - platform
+
+networks:
+  finance:
+  platform:
+
+volumes:
+  finance-data:
