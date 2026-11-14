@@ -47,6 +47,14 @@ pnpm dev
 
 버전 출력은 각각 `v24.22.2`, `10.34.6`이어야 한다. `node_modules`는 Windows와 WSL/Linux 사이에 공유하거나 복사하지 않는다. 같은 소스와 lockfile로 각 환경에서 설치하며, esbuild/Rollup/Turbo의 바이너리는 OS와 CPU에 맞게 설치된다.
 
+Linux/WSL에서 기존 `PNPM_HOME` 경로의 pnpm이 먼저 선택되어 버전이 다르게 표시된다면, `nvm use` 후 현재 Node에 설치한 전역 도구 경로를 우선한다. 현재 터미널에만 적용되며 새 터미널에서도 필요한 경우 실행한다.
+
+```bash
+export PATH="$NVM_BIN:$PATH"
+node --version
+pnpm --version
+```
+
 `pnpm dev`는 Finance와 개발 포털의 프론트엔드, Finance 서버를 함께 실행한다. 포털은 `http://localhost:5174`로 접속하며 포트 사용 중에는 오류로 종료한다. 포털만 실행하려면 `pnpm dev-portal`을 사용한다. Finance 화면과 서버만 함께 실행하려면 `pnpm dev-finance`를 사용한다. 서버만 실행하려면 `pnpm dev-finance-server`, Finance 프론트엔드만 실행하려면 `pnpm --filter @devflowops/finance-web dev`를 사용한다.
 
 서버 단독 실행·빌드·상태 확인과 개발 프록시, API·DB 설정은 [Finance 서버 안내](../apps/finance-server/README.md)를 따른다. 실행 가능한 패키지와 현재 구현 범위는 [개발 진행 현황](DEVELOPMENT_STATUS.md)에서 확인한다.
@@ -56,6 +64,7 @@ pnpm dev
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
 pnpm build
 ```
 
@@ -183,6 +192,50 @@ Finance 브라우저 검증의 설치·실행과 격리 방식은 [Finance E2E �
 - Chromium에서 한국어·영어 전환, Finance 오류·성공 안내·복수형·사용자 입력과 기본 카테고리 보존, 포털 앱 유형·선택·문서 제목·언어 선택 저장을 확인했다. Finance는 가상 API 응답을 사용해 DB를 변경하지 않았다.
 - 빌드와 기존 E2E 명령, 실제 모바일 기기와 다른 브라우저는 이번 작업에서 확인하지 않았다.
 
+### 2026-11-14 개발 도구와 의존성 준비 확인
+
+- `nvm install 24.22.2`와 `npm install --global pnpm@10.34.6`으로 고정 버전을 설치했다. 기존 pnpm 경로가 먼저 선택되어 현재 Node의 전역 도구 경로를 우선한 뒤 버전을 확인했다.
+- `pnpm install --frozen-lockfile`: 워크스페이스 의존성 설치 성공. lockfile 변경 없이 설치했다.
+- `pnpm lint`: 문서 언어 검사와 세 패키지 lint 통과. 최초 실행은 샌드박스의 하위 git 실행 제한으로 중단됐으며 권한 승인 후 같은 명령을 재실행해 통과했다.
+- `pnpm typecheck`, `pnpm build`: 세 패키지 모두 통과. 두 명령 모두 Turbo 캐시 적중 없이 실행했다.
+- 이번 작업은 개발 도구 설치와 기본 검사이며, E2E·브라우저 실행·Windows·ARM64·컨테이너·운영 배포는 검증하지 않았다. 애플리케이션 기능과 기본·운영 DB는 변경하지 않았다.
+
+### 2026-11-14 Finance 단위·API 테스트 도입 검증
+
+- Node.js `24.22.2`, pnpm `10.34.6`, Vitest `5.1.0`을 사용했다. 두 Finance 패키지에 개발 의존성을 추가하고 lockfile을 갱신했다.
+- `pnpm test`: API 32개, DB 4개, 월별 집계 6개로 총 42개 통과. 첫 실행은 두 패키지 모두 캐시 적중 없이 수행했다. 테스트의 JSON 응답 타입 처리를 수정한 후 재실행에서는 서버 36개를 다시 실행했고 웹 6개는 Turbo 캐시를 사용했다.
+- 메모리 DB로 CRUD·날짜와 ID 정렬·입력 검증·공통 오류·OpenAPI 제공을 검사했다. 임시 파일 DB의 재연결 후 저장 유지, DB 버전 거부·SQL 실패 시 트랜잭션 종료·SQL 제약조건과 월별 집계의 연말·월말·윤일·큰 금액·내역 변경 후 재집계를 확인했다. 테스트 종료 후 해당 접두사의 임시 DB 디렉터리가 남지 않는 것을 확인했다.
+- `pnpm lint`: 문서 언어 검사와 세 패키지 lint 통과. 문서 검사의 하위 git 실행 제한 때문에 권한을 승인받아 실행했다.
+- `pnpm typecheck`: 테스트의 JSON 응답을 unknown으로 처리하는 초기 타입 오류를 수정한 후 세 패키지 통과. 최종 실행은 웹 두 패키지의 캐시를 사용하고 서버의 소스·테스트·설정을 다시 검사했다.
+- `pnpm build`: 세 패키지 모두 캐시 적중 없이 통과. 서버 테스트는 배포용 dist에 포함하지 않는다.
+- `pnpm test:e2e`: 제한 환경에서는 전용 서버 시작이 실패했다. 권한 승인 후 실행에서는 Chromium 실행 파일 누락으로 10개 모두 브라우저 시작 전 실패했다. `pnpm --filter @devflowops/finance-web exec playwright install chromium`으로 설치한 뒤 재실행했으나 `libnspr4.so` 등 OS 라이브러리 누락으로 10개 모두 브라우저 시작 전 실패했다.
+- `pnpm --filter @devflowops/finance-web exec playwright install-deps chromium`: sudo 인증용 터미널이 필요해 실패했다. OS 의존성 설치와 E2E 통과는 이번 작업에서 확인하지 못했다. 앱 화면 회귀는 브라우저에서 재검증하지 못했으며 Windows·ARM64·실제 모바일 기기·컨테이너·CI·운영 배포도 검증하지 않았다. 기본·운영 DB는 사용하지 않았다.
+
+### 2026-11-14 E2E 재개 안내 문서 확인
+
+- 로컬 E2E 미완료가 후속 개발을 막지 않는다는 기준과 다른 환경에서의 설치·실행·결과 기록 절차를 추가했다.
+- `pnpm lint:docs`와 `git diff --check` 통과. 문서만 변경했으며 앱 테스트·빌드·OS 의존성 설치와 E2E는 재실행하지 않았다.
+
+### 2026-11-14 로컬 pnpm 실행 경로 확인
+
+- 초기 `node --version`은 `v26.13.0`이었으며 `pnpm --version`은 자동 전환 대상 실행 파일 누락으로 실패했다. 선택된 pnpm은 `PNPM_HOME` 아래에서 Node 26의 전역 설치를 가리켰다.
+- `nvm use` 후 `export PATH="$NVM_BIN:$PATH"`를 적용하자 `node --version`은 `v24.22.2`, `pnpm --version`은 `10.34.6`으로 정상 출력됐다. 사용자 터미널과 새 터미널의 경로는 별도로 적용해야 한다.
+- `pnpm lint:docs`는 제한 환경의 하위 Git 실행 오류 후 권한을 승인받아 재실행하여 통과했다. 앱 실행·테스트·빌드와 영구 셸 설정 변경은 수행하지 않았다.
+
+### 2026-11-14 E2E 실패 원인 재확인
+
+- 고정 Node.js `24.22.2`와 pnpm `10.34.6` 경로를 적용해 `pnpm test:e2e`를 실행했다. 제한 환경에서는 전용 서버 시작이 실패했고, 권한 승인 후 같은 명령을 재실행했다.
+- 전용 API·Vite 서버는 시작됐으나 데스크톱·모바일 총 10개 모두 Chromium 시작 단계에서 `libnspr4.so` 누락으로 실패했다. 화면 동작과 현재 코드의 브라우저 회귀 여부는 검증하지 못했다.
+- 앱 코드와 E2E 설정은 변경하지 않았고 OS 의존성 설치도 수행하지 않았다. 시스템 의존성을 준비한 뒤 전체 E2E를 재실행해야 한다.
+
+### 2026-11-14 OS 의존성 설치 후 E2E 재검증
+
+- 사용자 측 OS 의존성 설치 후 고정 Node.js `24.22.2`와 pnpm `10.34.6`으로 `pnpm test:e2e`를 재실행했다. 제한 환경에서는 전용 서버 시작이 실패했으며, 권한 승인 후 실행은 통과했다.
+- Chromium 데스크톱 5개와 모바일 에뮬레이션 5개로 총 10개가 통과했다. Playwright 보고 실행 시간은 `28.2s`다. 이전의 공유 라이브러리 누락으로 인한 브라우저 시작 실패는 이번 실행에서 재현되지 않았다.
+- 등록·재조회·수정·삭제와 월별 합계, 종류 필터, 잘못된 입력과 저장 실패 후 재시도, 조회 실패 복구, 언어 선택 유지와 화면 넘침을 검사했다. 실행별 임시 DB를 사용하며 기본·운영 DB는 사용하지 않았다.
+- 앱 코드와 E2E 설정은 변경하지 않았다. 실제 모바일 기기·다른 브라우저·Windows·ARM64·컨테이너·CI·운영 배포는 이번 실행에서 검증하지 않았다. 단위·API 테스트와 앱 lint·타입 검사·빌드도 재실행하지 않았다.
+- `pnpm lint:docs`는 제한 환경의 하위 Git 실행 오류 후 권한을 승인받아 통과했다. `git diff --check`도 통과했다.
+
 ## 7. 화면 다국어 작업
 
 - Finance와 포털은 각각 `src/i18n/index.ts`에서 i18next를 초기화하고 `src/main.tsx`에서 화면 렌더링 전에 불러온다. 번역 JSON은 앱별 `src/i18n/locales/ko.json`, `en.json`에서 관리하며 네트워크 요청 없이 번들에 포함한다.
@@ -218,6 +271,28 @@ Linux에서 공유 라이브러리 누락으로 브라우저를 시작하지 못
 pnpm --filter @devflowops/finance-web exec playwright install-deps chromium
 ```
 
+### 환경을 옮겨 E2E를 재개할 때
+
+- 2026-11-14의 Ubuntu 환경에서는 Chromium 설치 후에도 `libnspr4.so`, `libnss3.so`, `libnssutil3.so`, `libasound.so.2`가 누락되어 브라우저를 시작하지 못했다. 이는 npm 의존성이 아닌 Linux 시스템 라이브러리이며, 다른 환경의 누락 항목은 다를 수 있다.
+- 당시 OS 의존성 설치는 sudo 인증용 터미널이 필요해 중단됐다. 설치 권한이 있는 일반 터미널이나 CI 실행 환경에서 아래 절차로 재개한다. Windows에서는 Linux용 OS 의존성 설치 단계를 적용하지 않는다.
+- 고정 Node.js·pnpm 준비는 [새 환경 설치 절차](#3-새-환경-설치-및-현재-명령)를 따른다. 저장소 루트에서 lockfile 기준으로 설치하고, 해당 Playwright 버전의 Chromium을 준비한 뒤 E2E를 실행한다.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @devflowops/finance-web exec playwright install chromium
+```
+
+Linux에서는 필요한 OS 의존성도 설치한다. sudo 인증이 필요하면 입력 가능한 터미널에서 실행한다.
+
+```bash
+pnpm --filter @devflowops/finance-web exec playwright install-deps chromium
+pnpm test:e2e
+```
+
+Windows에서는 Chromium 설치 후 바로 `pnpm test:e2e`를 실행한다. 결과는 실행일·환경·명령·성공 또는 실패 원인과 함께 [검증 기록](#6-현재-검증-상태)에 남긴다. 이전 환경의 통과 기록으로 현재 환경의 검증을 대신하지 않는다.
+
+로컬 E2E 미완료 상태에서도 단위·API 테스트와 PR CI 구성 등 후속 개발은 진행할 수 있다. PR CI에 Chromium·OS 의존성 설치와 E2E 실행을 연결하는 작업도 진행할 수 있으며, CI에서의 실제 통과 여부는 별도로 확인한다. 브라우저 시작 전 실패는 E2E 성공으로 처리하지 않으며, 필수 검사가 실패하거나 미실행인 상태에서 배포 검증 완료로 판단하지 않는다.
+
 ## 9. 포털 관리 앱 자동 발견
 
 - `apps/<앱 폴더>/package.json`에 비어 있지 않은 이름이 있으면 포털이 목록에 자동으로 표시한다. 현재 `pnpm-workspace.yaml`의 `apps/*` 범위에 맞춘 탐색이며, 폴더만 있거나 이름이 없는 항목은 제외한다. 새 패키지는 기존 개발 규칙에 따라 설치·실행 구성을 갖춘다.
@@ -225,3 +300,19 @@ pnpm --filter @devflowops/finance-web exec playwright install-deps chromium
 - 개발 서버는 apps 디렉터리도 감시해 package.json 추가·변경·삭제를 화면에 반영한다. 앱 이름은 번역하지 않으며 유형과 안내 문구만 한국어·영어로 전환한다.
 - 빌드된 포털의 목록은 빌드 당시의 저장소 내용을 반영한다. 앱 변경을 배포 화면에 적용하려면 포털을 다시 빌드·배포한다. 루트 Turbo의 globalDependencies에 `apps/*/package.json`을 포함해 패키지 정보 변경 시 이전 빌드 캐시를 재사용하지 않도록 한다.
 - 목록 발견은 실제 실행·배포 등록과 분리한다. 발견한 앱의 스크립트를 자동 실행하지 않고 CI·배포 결과나 권한이 연결된 것으로 표시하지 않는다. 실행 대상 등록은 별도 계약과 접근 제어를 마련한 뒤 도입한다.
+
+## 10. Finance 단위·API 테스트
+
+고정 Node.js와 pnpm으로 의존성을 설치한 뒤 저장소 루트에서 실행한다.
+
+```bash
+pnpm test
+pnpm --filter @devflowops/finance-server test
+pnpm --filter @devflowops/finance-web test
+```
+
+- 루트 명령은 Turbo를 통해 test 스크립트가 있는 패키지의 Vitest를 한 번 실행하고 종료한다. 앱별 `vitest.config.ts`에서 테스트 범위를 지정하며, 포털과 Playwright E2E는 이 명령에 포함하지 않는다. 설정 문법은 [Vitest 공식 문서](https://vitest.dev/config/)를 참고한다.
+- API 테스트는 `createApp(db)`와 `app.request()`로 HTTP 포트 없이 실행하며, 사례마다 새 `:memory:` DB와 실제 SQL 마이그레이션을 사용하고 종료 후 닫는다. 기존 `FINANCE_DB_PATH`와 기본 DB는 사용하지 않는다.
+- 파일 저장 검사는 OS 임시 디렉터리의 `devflowops-finance-unit-` 접두사 경로에 DB를 생성하고 같은 파일을 닫았다가 다시 연다. 검사 종료 후 연결을 닫고 디렉터리를 삭제한다. 서버 프로세스 재시작을 수행하는 검사는 아니다.
+- 서버 테스트는 `tests/`에 두고 `tsconfig.test.json`으로 타입 검사한다. 서버 배포 빌드에는 포함하지 않는다. 웹 단위 테스트는 `src/`의 순수 집계 함수를 검증하며 DOM 환경은 사용하지 않는다.
+- 테스트 시나리오의 현재 구현 범위는 [개발 진행 현황](DEVELOPMENT_STATUS.md), 실행 결과와 미확인 범위는 [검증 기록](#6-현재-검증-상태)을 따른다. Turbo의 기본 입력에 소스·테스트·SQL 파일이 포함되므로 변경 시 해당 패키지의 테스트 캐시를 갱신한다.
