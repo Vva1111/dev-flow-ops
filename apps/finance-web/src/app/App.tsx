@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { CSSProperties } from 'react'
 import { formatMonth, formatWon } from '../i18n/format'
 import { localDate } from '../features/transactions/date'
+import { summarizeMonth } from '../features/transactions/summary'
 import { TransactionsPanel } from '../features/transactions/TransactionsPanel'
 import { useTransactions } from '../features/transactions/useTransactions'
 import { LanguageSwitcher } from '../i18n/LanguageSwitcher'
@@ -46,13 +47,7 @@ export default function App() {
   const data = useTransactions()
   const month = localDate().slice(0, 7)
   const monthLabel = formatMonth(month, language)
-  const monthTransactions = data.transactions.filter((item) => item.date.startsWith(`${month}-`))
-  const income = monthTransactions.reduce((sum, item) => item.type === 'income' ? sum + BigInt(item.amount) : sum, 0n)
-  const totalExpense = monthTransactions.reduce((sum, item) => item.type === 'expense' ? sum + BigInt(item.amount) : sum, 0n)
-  const categoryTotals = new Map<string, bigint>()
-  for (const item of monthTransactions) {
-    if (item.type === 'expense') categoryTotals.set(item.category, (categoryTotals.get(item.category) ?? 0n) + BigInt(item.amount))
-  }
+  const { income, expense: totalExpense, categoryTotals } = summarizeMonth(data.transactions, month)
   const categories = [...categoryTotals].map(([name, amount], index) => ({
     name, amount, color: budgetCategories[index % budgetCategories.length].color,
   })).sort((a, b) => a.amount === b.amount ? a.name.localeCompare(b.name) : a.amount > b.amount ? -1 : 1)
