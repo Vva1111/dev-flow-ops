@@ -6,7 +6,7 @@
 
 ### 단계
 
-- 수입·지출 CRUD·DB 저장·API 문서와 Playwright E2E·Vitest 단위·API 테스트를 구성하고 PR CI 연결을 준비하는 단계다.
+- 수입·지출 CRUD·DB 저장·API 문서와 Playwright E2E·Vitest 단위·API 테스트를 구성하고 PR CI와 자동 병합 실행 구성을 갖추고 GitHub 동작 검증을 준비하는 단계다.
 - 자산·부채·예산·저축 목표는 샘플이며, 개발·검증·배포·배포 후 QA의 전체 자동화는 아직 연결하지 않았다.
 - 1차 구현 범위는 수입·지출 등록·조회·수정·삭제와 DB 저장, API 스키마 기반 OpenAPI 생성과 Swagger UI 문서 제공으로 확정했다.
 
@@ -36,12 +36,14 @@
 - 루트 `pnpm test:e2e`로 전용 API·Vite 서버와 실행별 임시 DB를 사용하며 정상 종료 시 DB를 정리한다. HTML 보고서와 실패 스크린샷·Trace를 Git 제외 경로에 남긴다.
 - Vitest로 메모리 DB 기반 API 테스트, 임시 파일 DB 재연결과 마이그레이션·SQL 제약조건 검사, 월별 집계 단위 테스트를 구성했다. 루트 `pnpm test`로 Finance 웹·서버 검사를 실행한다.
 
+- GitHub Actions에서 PR·main push·수동 실행의 품질 검사와 Finance E2E, 보고서 보관을 구성했다. 같은 저장소의 Draft가 아닌 협업자 PR은 CI 성공 후 최신 커밋을 확인해 자동 squash 병합하도록 구성했다.
+
 ### 미구현 사항
 
 - 별도 상세 화면과 서버 집계 API.
 - 실제 자산·부채·예산·저축 목표의 입력과 저장.
 - 카테고리 관리, 날짜 필터, 사용자 지정 정렬과 페이지네이션.
-- GitHub Actions 기반 PR CI 자동 검증.
+- GitHub에서 PR CI와 자동 병합의 실제 실행 검증 및 main 보호 규칙 적용.
 - 컨테이너 빌드·배포 자동화, 배포 후 QA와 CI 실패·품질 결과의 AI 분석.
 
 ## 포털

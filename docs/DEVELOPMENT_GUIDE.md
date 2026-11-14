@@ -259,6 +259,14 @@ Finance 브라우저 검증의 설치·실행과 격리 방식은 [Finance E2E �
 - 과거 파일로 되돌리지 않고 현재 작업 파일의 충돌 표시를 제거했다. 기존 검증 이력은 보존하고 Finance 단계와 미구현 목록을 실제 Vitest 구성에 맞췄다. 앱 코드와 의존성은 변경하지 않았다.
 - `pnpm lint:docs`와 `git diff --check`가 통과했고 추적 파일에 충돌 표시가 없는 것을 확인했다. 직전 점검에서 통과한 단위·API 테스트, 타입 검사와 빌드는 이번 문서 수정 후 재실행하지 않는다. E2E, CI와 운영 배포는 미검증이다.
 
+### 2026-11-14 PR CI와 자동 병합 구성 검증
+
+- `ci/pr-checks-auto-merge` 작업 브랜치에서 CI와 자동 병합 워크플로를 작성했다. main 직접 push 대신 PR로 반영하는 운영 기준을 결정 기록에 추가했다.
+- Node.js `24.22.2`와 pnpm `10.34.6`에서 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`가 통과했다. 앱 작업은 Turbo 캐시를 재사용했으며 단위/API 테스트는 기존 서버 36개·웹 6개의 통과 결과를 재사용했다. 문서 언어 검사는 직접 실행했다.
+- `pnpm test:e2e`는 Chromium 데스크톱 5개·모바일 에뮬레이션 5개로 총 10개가 통과했다. Playwright 보고 시간은 `28.0s`이며 실행별 임시 DB를 사용했다. 기본·운영 DB는 사용하지 않았다.
+- `actionlint 1.7.7`로 두 워크플로의 문법·표현식을 검사해 통과했다. 실행 파일은 OS 임시 경로에 내려받았고 프로젝트 의존성은 추가하지 않았다. `git diff --check`도 통과했다.
+- GitHub 호스팅 runner의 실제 CI, main 보호 규칙과 자동 병합 설정 적용, CI 실패 시 병합 차단, Draft 전환과 최신 커밋 비교의 실제 GitHub 동작은 미검증이다. 로컬에는 GitHub CLI와 연결된 GitHub 플러그인이 없어 저장소 설정을 적용하지 않았다. Windows·ARM64·컨테이너·배포도 이번에 검증하지 않았다.
+
 ## 7. 화면 다국어 작업
 
 - Finance와 포털은 각각 `src/i18n/index.ts`에서 i18next를 초기화하고 `src/main.tsx`에서 화면 렌더링 전에 불러온다. 번역 JSON은 앱별 `src/i18n/locales/ko.json`, `en.json`에서 관리하며 네트워크 요청 없이 번들에 포함한다.
@@ -339,3 +347,15 @@ pnpm --filter @devflowops/finance-web test
 - 파일 저장 검사는 OS 임시 디렉터리의 `devflowops-finance-unit-` 접두사 경로에 DB를 생성하고 같은 파일을 닫았다가 다시 연다. 검사 종료 후 연결을 닫고 디렉터리를 삭제한다. 서버 프로세스 재시작을 수행하는 검사는 아니다.
 - 서버 테스트는 `tests/`에 두고 `tsconfig.test.json`으로 타입 검사한다. 서버 배포 빌드에는 포함하지 않는다. 웹 단위 테스트는 `src/`의 순수 집계 함수를 검증하며 DOM 환경은 사용하지 않는다.
 - 테스트 시나리오의 현재 구현 범위는 [개발 진행 현황](DEVELOPMENT_STATUS.md), 실행 결과와 미확인 범위는 [검증 기록](#6-현재-검증-상태)을 따른다. Turbo의 기본 입력에 소스·테스트·SQL 파일이 포함되므로 변경 시 해당 패키지의 테스트 캐시를 갱신한다.
+
+## 11. PR CI와 자동 병합
+
+- `.github/workflows/ci.yml`은 main 대상 PR의 생성·추가 push·재개·Draft 해제, main push와 수동 실행에서 동작한다. Ubuntu 24.04에서 `.nvmrc`와 루트 packageManager 버전을 사용하고 frozen lockfile로 설치한다.
+- quality 작업은 lint·타입 검사·단위/API 테스트·빌드를 순서대로 실행한다. 별도 E2E 작업은 Chromium과 OS 의존성을 설치하고 실행별 임시 DB를 사용한다. 취소되지 않은 실행은 HTML 보고서와 실패 증거를 Artifact로 7일 보관한다. 설치 실패 시 보고서가 없을 수 있다.
+- 각 CI 작업은 15분으로 제한하고 같은 ref의 이전 실행을 취소한다. pnpm 저장소만 캐시하며 Turbo와 브라우저 캐시는 실행 간 저장하지 않는다.
+- `.github/workflows/auto-merge.yml`은 CI가 성공한 같은 저장소의 협업자 PR에 자동 병합을 적용한다. 별도 라벨이나 수동 예약은 필요 없다. Draft는 제외하며 최신 커밋이 검사한 커밋과 다르면 건너뛴다. 조건은 [결정 기록](DECISIONS.md#2026-11-14--pr-ci와-자동-병합-운영)을 따른다.
+- 최초 적용은 두 워크플로를 main에 병합해야 한다. workflow_run은 기본 브랜치에 있는 워크플로로 실행되므로 최초 PR의 자동 병합은 수동으로 진행해야 할 수 있다.
+- GitHub Settings의 General에서 Allow auto-merge와 squash merge를 허용한다. Rulesets에서 main 대상 Active 규칙에 PR 필수, 두 CI 작업의 성공 필수, 강제 push 차단과 삭제 차단을 설정한다. 리뷰 승인 수는 0으로 두고 bypass는 추가하지 않는다. Restrict updates는 켜지 않는다.
+- 필수 검사 이름은 `Lint, types, unit tests and build`와 `Finance E2E`다. 먼저 PR CI를 한 번 실행한 뒤 GitHub Actions를 출처로 지정한다. 이 설정 전에는 CI 검사만으로 main 직접 push가 차단되지 않는다.
+- 병합 작업에는 contents와 pull-requests 쓰기 권한이 필요하지만 PR 코드나 Artifact를 실행하지 않는다. 추가 개인 토큰은 사용하지 않는다. 기본 GITHUB_TOKEN으로 병합한 변경은 push 워크플로를 다시 유발하지 않을 수 있으므로 향후 배포 연결 시 트리거를 별도 검토한다.
+- 실제 CI 성공·실패 차단·Draft 해제·추가 커밋·자동 병합 검증은 GitHub에서 실행 후 기록한다. 참고: [Playwright CI](https://playwright.dev/docs/ci), [GitHub 자동 병합](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/automatically-merging-a-pull-request).
